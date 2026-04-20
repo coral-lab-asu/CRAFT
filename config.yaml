@@ -1,0 +1,48 @@
+# CRAFT Pipeline Configuration
+# Adjust these values before running any stage.
+
+# ── Dataset ──────────────────────────────────────────────────────────────────
+dataset: nq          # "nq" or "ottqa"
+
+# ── Stage 1: SPLADE Sparse Retrieval ─────────────────────────────────────────
+stage1:
+  model: naver-splade/splade-v2-distil   # HuggingFace model id
+  device: cpu                             # "cpu" or "cuda"
+  top_k: 5000                             # Candidates passed to Stage 2
+  batch_size: 128
+
+# ── Stage 2: Dense Semantic Reranking ────────────────────────────────────────
+stage2:
+  # NQ-Tables
+  model_nq: sentence-transformers/all-mpnet-base-v2
+  # OTT-QA
+  model_ottqa: jinaai/jina-embeddings-v3
+  device: cpu
+  top_k: 100          # Candidates passed to Stage 3
+  mini_table_rows: 5  # Top rows per table kept as mini-table
+
+# ── Stage 3: Neural Reranking ─────────────────────────────────────────────────
+stage3:
+  # NQ-Tables  (set use_gemini: false)
+  model_nq: text-embedding-3-large
+  use_gemini_nq: false
+  # OTT-QA  (set use_gemini: true)
+  model_ottqa: models/gemini-embedding-001
+  use_gemini_ottqa: true
+  batch_size: 50      # Embedding API calls per batch
+
+# ── End-to-End QA ─────────────────────────────────────────────────────────────
+qa:
+  model: gpt-4o            # LLM for answer generation
+  num_tables: [1, 3, 5]    # n retrieved tables to evaluate
+  use_mini_table: true
+  max_answer_tokens: 200   # max_tokens for the LLM response
+  max_queries: null         # null = process all queries
+
+# ── Paths (relative to repo root) ────────────────────────────────────────────
+paths:
+  nq_metadata: datasets/nq_tables_metadata_updated.csv
+  nq_questions: datasets/combined.jsonl
+  ottqa_metadata: datasets/ottqa_tables_metadata.csv
+  ottqa_questions: datasets/ottqa_queries_test.jsonl
+  results_dir: results/

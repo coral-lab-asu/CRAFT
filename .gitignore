@@ -1,0 +1,33 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Large data files — download from Google Drive (see README)
+datasets/nq_stage1_splade_corpus.pkl
+datasets/nq_stage2_results.pkl
+datasets/ottqa_stage2_results.jsonl
+datasets/ottqa_row_tables.pkl
+datasets/ottqa_top_rows.pkl
+results/
+
+# Small pre-computed result files — tracked in git
+!datasets/nq_stage3_results.jsonl
+!datasets/ottqa_stage3_results.jsonl
+
+# Unwanted code file
+scripts/SPLADE_1st_stage.ipynb
+scripts/run_stage3_craft.ipynb
+scripts/run_stage3_craft_1.ipynb
+
+# OS
+.DS_Store
