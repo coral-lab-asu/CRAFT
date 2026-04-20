@@ -1,6 +1,6 @@
 # CRAFT: Training-Free Cascaded Retrieval for Tabular QA
 
-[![Paper](https://img.shields.io/badge/Paper-ACL%202025-red)](https://aclanthology.org/2025.acl-long.0)
+[![Paper](https://img.shields.io/badge/Paper-ACL%202026-red)](https://aclanthology.org/2025.acl-long.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![NQ-Tables](https://img.shields.io/badge/Dataset-NQ--Tables-green)](https://github.com/google-research/tapas)
