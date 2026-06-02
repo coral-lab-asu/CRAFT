@@ -1,0 +1,47 @@
+# CRAFT config for NQ-Tables
+# Run: python scripts/preprocess.py --config configs/nq_tables.yaml
+#      python scripts/retrieve.py   --config configs/nq_tables.yaml
+
+data:
+  dataset: nq
+  # Path to NQ-Tables tables JSONL (169,898 Wikipedia tables)
+  corpus_file:  datasets/NQ_Tables/tables/tables.jsonl
+  # Path to NQ-Tables questions JSONL (966 test questions)
+  queries_file: datasets/NQ_Tables/interactions/combined.jsonl
+  # All preprocessing + retrieval artifacts go here
+  output_dir:   results/nq_pipeline
+  # Fields concatenated to form the corpus text fed to SPLADE
+  corpus_fields: title+headers+description+cells
+  # "query+subquestion+description" uses GeneratedSubQuestion + GeneratedQuestionDescription
+  # Use "query+subquestion" for ablation without question descriptions
+  query_type: query+subquestion+description
+  # Path to LLM-generated table descriptions (Title + Description per table)
+  # Overridable via NQ_DESC_PATH env var; auto-detected relative to repo root if blank
+  table_descriptions_file: datasets/nq_table_summary_table_description.jsonl
+
+stage1:
+  model_id: naver/splade_v2_distil
+  sparse_top_k: 5000   # non-zero terms kept per document
+  top_k: 5000          # candidates passed to Stage 2
+  batch_size: 512       # H200 (140 GB) handles 512 easily; was 128
+
+stage2:
+  model_id: sentence-transformers/all-mpnet-base-v2
+  top_k_rows: 5        # rows per table forming the mini-table
+  top_k: 100           # candidates passed to Stage 3
+  batch_size: 4096
+  mode: mini_table     # "mini_table" (paper) or "fast"
+  score_chunk_size: 64 # reduce if Stage 2 scoring runs out of GPU memory
+
+stage3:
+  # Stage 3 is enabled automatically when OPENAI_API_KEY is set in .env
+  enabled: false       # override to true if you want to force it
+  provider: openai
+  model_id: text-embedding-3-large
+  top_k: 50
+  api_batch: 100
+  api_sleep: 0.5
+
+cuda_devices: "0,1"   # overridden by CUDA_VISIBLE_DEVICES in .env
+log_file: craft_nq.log
+eval_ks: [1, 10, 50, 100, 500, 5000]

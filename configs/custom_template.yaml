@@ -1,0 +1,60 @@
+# CRAFT config template for a custom dataset
+# Copy this file, fill in the paths below, and run:
+#   python scripts/preprocess.py --config configs/my_dataset.yaml
+#   python scripts/retrieve.py   --config configs/my_dataset.yaml
+
+data:
+  # Use "custom" to activate the generic JSONL loader.
+  dataset: custom
+
+  # --- Your corpus ---
+  # One JSON object per line.  Required keys:
+  #   "table_id"  : unique string
+  #   "title"     : table title (string)
+  #   "headers"   : list of column names
+  #   "rows"      : list of lists of cell strings
+  #   "description": optional LLM-generated summary (recommended for Stage 1)
+  corpus_file: /path/to/your/corpus.jsonl
+
+  # --- Your queries ---
+  # One JSON object per line.  Required keys:
+  #   "qid"           : unique question ID
+  #   "question"      : question text
+  #   "gold_table_ids": list of correct table IDs (needed for eval)
+  # Optional keys:
+  #   "subquestion"   : decomposed question (helps Stage 1)
+  #   "answer"        : gold answer string
+  queries_file: /path/to/your/queries.jsonl
+
+  output_dir: results/custom_pipeline
+  corpus_fields: title+headers+description+cells
+  query_type: query+subquestion    # or just "query" if no subquestions
+
+stage1:
+  model_id: naver/splade_v2_distil
+  sparse_top_k: 5000
+  top_k: 5000
+  batch_size: 128
+
+stage2:
+  # For a new domain, all-mpnet-base-v2 is a solid starting point.
+  # Switch to jinaai/jina-embeddings-v3 for multilingual or long tables.
+  model_id: sentence-transformers/all-mpnet-base-v2
+  top_k_rows: 5
+  top_k: 100
+  batch_size: 256
+  mode: mini_table    # switch to "fast" for a quick first run
+  score_chunk_size: 64
+
+stage3:
+  # Set OPENAI_API_KEY in .env to auto-enable.
+  enabled: false
+  provider: openai    # "openai" or "gemini"
+  model_id: text-embedding-3-large
+  top_k: 50
+  api_batch: 100
+  api_sleep: 0.5
+
+cuda_devices: "0"    # change to "0,1" for multi-GPU
+log_file: craft_custom.log
+eval_ks: [1, 10, 50, 100]

@@ -1,0 +1,43 @@
+# CRAFT config for OTT-QA
+# Run: python scripts/preprocess.py --config configs/ottqa.yaml
+#      python scripts/retrieve.py   --config configs/ottqa.yaml
+
+data:
+  dataset: ottqa
+  # Path to OTT-QA tables JSON (419,183 tables)
+  corpus_file:  datasets/OTT-QA/all_plain_tables.json
+  # Path to OTT-QA dev questions (2,214 questions)
+  queries_file: datasets/OTT-QA/released_data/dev.json
+  output_dir:   results/ottqa_pipeline
+  # description = intro + section_title + section_text (combined in loader)
+  corpus_fields: title+headers+description+cells
+  query_type: query+subquestion
+
+stage1:
+  model_id: naver/splade_v2_distil
+  sparse_top_k: 5000
+  top_k: 5000
+  batch_size: 128
+
+stage2:
+  # JINA v3 is used in the paper for OTT-QA; requires trust_remote_code=True
+  # (handled automatically when "jina" appears in the model_id)
+  model_id: jinaai/jina-embeddings-v3
+  top_k_rows: 5
+  top_k: 100
+  batch_size: 128    # JINA v3 is larger; reduce batch size accordingly
+  mode: mini_table
+  score_chunk_size: 32
+
+stage3:
+  # Stage 3 is enabled automatically when GEMINI_API_KEY is set in .env
+  enabled: false
+  provider: gemini
+  model_id: gemini-embedding-001
+  top_k: 50
+  api_batch: 100
+  api_sleep: 1.0     # Gemini free tier has stricter rate limits
+
+cuda_devices: "0,1"
+log_file: craft_ottqa.log
+eval_ks: [1, 10, 50, 100, 500]

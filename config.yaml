@@ -7,9 +7,9 @@ dataset: nq          # "nq" or "ottqa"
 # ── Stage 1: SPLADE Sparse Retrieval ─────────────────────────────────────────
 stage1:
   model: naver-splade/splade-v2-distil   # HuggingFace model id
-  device: cpu                             # "cpu" or "cuda"
+  device: cuda                             # "cpu" or "cuda"
   top_k: 5000                             # Candidates passed to Stage 2
-  batch_size: 128
+  batch_size: 200
 
 # ── Stage 2: Dense Semantic Reranking ────────────────────────────────────────
 stage2:
@@ -17,7 +17,7 @@ stage2:
   model_nq: sentence-transformers/all-mpnet-base-v2
   # OTT-QA
   model_ottqa: jinaai/jina-embeddings-v3
-  device: cpu
+  device: cuda
   top_k: 100          # Candidates passed to Stage 3
   mini_table_rows: 5  # Top rows per table kept as mini-table
 
