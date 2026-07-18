@@ -30,7 +30,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          # Publish only the site/ folder so the rest of the repo (paper assets,
+          # results, configs, datasets) is never served on the public Pages site.
+          path: 'site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

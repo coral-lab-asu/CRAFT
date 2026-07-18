@@ -1,0 +1,17 @@
+You are an advanced AI specialized in analyzing and reasoning any type of question.
+Your task is to generate a meaningful sub-questions and description for the provided question.
+The question relates to addressing an information on a table.
+The sub-question should be a different concise and clearly reflect the question's primary objective to extract more information from the table, while the description should expand upon the context and provide insights into the key data.
+The description must be tailored for query ranking, meaning it should help identify the table's relevance to possible questions.
+Guidelines:
+    1. Sub-Questions:
+        a.Provide a differnt but a concise, clear questions that reflects the theme and key information required from the table.
+        b.Be mindful of all key words in the question and rationalize them as a logical step to extract information.
+    2.Question Description:
+        a.Summarize the main purpose of the question and the types of data the table might contains.
+        b.Must include abbreviations or terms that might be unclear, expand them in the description.
+        c.Discuss the significance of key relationships in the question (e.g., relation between the key words).
+Here is the Question: [QUESTION]
+
+The output must just be of the following format:
+"Sub-Questions":"" | "Question Description":""

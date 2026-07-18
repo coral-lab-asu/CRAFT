@@ -1,17 +1,26 @@
-# CRAFT config for OTT-QA
-# Run: python scripts/preprocess.py --config configs/ottqa.yaml
-#      python scripts/retrieve.py   --config configs/ottqa.yaml
+# CRAFT configuration for OTT-QA.
+#   craft preprocess --config configs/ottqa.yaml
+#   craft retrieve   --config configs/ottqa.yaml
 
 data:
   dataset: ottqa
-  # Path to OTT-QA tables JSON (419,183 tables)
-  corpus_file:  datasets/OTT-QA/all_plain_tables.json
-  # Path to OTT-QA dev questions (2,214 questions)
-  queries_file: datasets/OTT-QA/released_data/dev.json
-  output_dir:   results/ottqa_pipeline
-  # description = intro + section_title + section_text (combined in loader)
+  corpus_file:  datasets/OTT-QA/all_plain_tables.json     # 419,183 tables
+  queries_file: datasets/OTT-QA/released_data/dev.json    # 2,214 questions
+  output_dir:   results/ottqa
+  # For OTT-QA the description is intro + section_title + section_text (built
+  # by the loader), so no separate descriptions file is needed.
   corpus_fields: title+headers+description+cells
   query_type: query+subquestion
+
+generation:
+  enabled: false
+  backend: vllm
+  model: Qwen/Qwen3-8B
+  enrich_tables: true
+  expand_queries: false
+  max_new_tokens: 512
+  batch_size: 64
+  sample_rows: 10
 
 stage1:
   model_id: naver/splade_v2_distil
@@ -20,23 +29,21 @@ stage1:
   batch_size: 128
 
 stage2:
-  # JINA v3 is used in the paper for OTT-QA; requires trust_remote_code=True
-  # (handled automatically when "jina" appears in the model_id)
+  # JINA v3 is used for OTT-QA in the paper; trust_remote_code is handled
+  # automatically when "jina" appears in the model id.
   model_id: jinaai/jina-embeddings-v3
-  top_k_rows: 5
+  mode: representative_row
   top_k: 100
-  batch_size: 128    # JINA v3 is larger; reduce batch size accordingly
-  mode: mini_table
-  score_chunk_size: 32
+  top_k_rows: 5
+  batch_size: 128
 
 stage3:
-  # Stage 3 is enabled automatically when GEMINI_API_KEY is set in .env
-  enabled: false
+  enabled: false                 # auto-enabled when GEMINI_API_KEY is set
   provider: gemini
   model_id: gemini-embedding-001
   top_k: 50
   api_batch: 100
-  api_sleep: 1.0     # Gemini free tier has stricter rate limits
+  api_sleep: 1.0
 
 cuda_devices: "0,1"
 log_file: craft_ottqa.log
