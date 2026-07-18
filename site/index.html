@@ -541,6 +541,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Paper (ACL)
     </a>
+    <a class="btn btn-outline" href="CRAFT.pdf" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+      Paper PDF
+    </a>
+    <a class="btn btn-outline" href="CRAFT_slides.pdf" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Slides
+    </a>
     <a class="btn btn-outline" href="https://arxiv.org/abs/2505.14984" target="_blank">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       arXiv
@@ -558,8 +566,9 @@
 
     <div class="eyebrow">How it works</div>
     <h2 class="h-sec">The pipeline, step by step</h2>
-    <p class="lead">A question and a large collection of tables go in. CRAFT runs a sparse and a dense
-      retriever in parallel, builds a mini-table from the best rows, then reranks to a final shortlist.</p>
+    <p class="lead">A model can only answer over the tables the retriever finds, so CRAFT invests in retrieval.
+      A question and a large collection of tables go in; a sparse and a dense stage narrow the field, a mini-table
+      is built from the best rows, and a final rerank returns a precise shortlist — no fine-tuning anywhere.</p>
 
     <div class="anim mt-lg" id="anim">
       <div class="anim-stage">
@@ -615,10 +624,8 @@
             <div class="ksel" id="krow">
               <span class="ctl-label">Show top</span>
               <button class="kbtn" data-k="1">1</button>
-              <button class="kbtn active" data-k="5">5</button>
-              <button class="kbtn" data-k="3">3</button>
-              <button class="kbtn" data-k="10">10</button>
-              <button class="kbtn" data-k="0">All</button>
+              <button class="kbtn active" data-k="3">3</button>
+              <button class="kbtn" data-k="5">5</button>
             </div>
             <div class="ctl-toggles">
               <label class="tgl"><input type="checkbox" id="show-rows" /> Headers &amp; rows</label>
@@ -694,25 +701,27 @@ craft tui                                            <span class="cmt"># menu-dr
       <div class="fcard">
         <div class="k">Stage 1 · Sparse</div>
         <h4>SPLADE</h4>
-        <p>Lexical retrieval over enriched table text narrows the full corpus to the top <b>5,000</b> candidates.</p>
+        <p>Lexical retrieval scans the whole corpus cheaply. Working over LLM-enriched table text and
+          expanded queries, it casts a wide net so the answer table stays in the running.</p>
       </div>
       <div class="fcard s2">
         <div class="k">Stage 2 · Dense</div>
         <h4>Sentence Transformer</h4>
-        <p>Row-level dense reranking scores candidates against the query, keeping the top <b>100</b>.</p>
+        <p>Each candidate is compressed to a mini-table of its most relevant rows, then scored by meaning
+          rather than shared words — trimming noise and sharpening the shortlist.</p>
       </div>
       <div class="fcard s3">
         <div class="k">Stage 3 · Rerank</div>
         <h4>Final reranking</h4>
-        <p>A reranker or embedding model — open-source or API — orders the shortlist into the final
-          top-<em>k</em>. This stage is swappable, so you can pick the model that fits your setup.</p>
+        <p>A stronger model — reranker or embedding, open-source or API — runs only on the finalists to set
+          the final order. This stage is plug-and-play, so you pick the model that fits your setup.</p>
       </div>
     </div>
 
     <div class="grid-3 mt-lg">
-      <div class="fcard"><div class="ico">🔍</div><h4>Query expansion</h4><p>An LLM generates sub-questions that broaden lexical coverage of each query.</p></div>
-      <div class="fcard"><div class="ico">📋</div><h4>Table enrichment</h4><p>Each table gets an LLM title + summary, bridging the lexical gap with natural-language queries.</p></div>
-      <div class="fcard"><div class="ico">✂️</div><h4>Mini-tables</h4><p>Top query-relevant rows form a compact mini-table, cutting context up to 5&times;.</p></div>
+      <div class="fcard"><div class="ico">🔍</div><h4>Query expansion</h4><p>An LLM decomposes each question into sub-questions online, broadening the lexical signal the sparse retriever can match.</p></div>
+      <div class="fcard"><div class="ico">📋</div><h4>Table enrichment</h4><p>An LLM writes a title and description for every table offline, bridging the vocabulary gap between tables and natural-language questions.</p></div>
+      <div class="fcard"><div class="ico">✂️</div><h4>Mini-tables</h4><p>The most query-relevant rows form a compact mini-table, so more candidate tables fit inside a model's context.</p></div>
     </div>
 
     <img src="static/images/craft_overview.png" alt="CRAFT pipeline overview" class="fig wide mt-lg" />
@@ -826,7 +835,7 @@ craft tui                                            <span class="cmt"># menu-dr
     cache: {},           // dataset -> data
     query: null,         // currently selected query object
     stage: "stage3",     // active stage
-    k: 5,                // top-k to show
+    k: 3,                // top-k to show (options: 1 / 3 / 5)
     showRows: false,
   };
   const els = {

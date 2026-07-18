@@ -1,370 +1,491 @@
 """
-Manim animation of the CRAFT retrieval pipeline.
+Manim animations for the CRAFT retrieval pipeline (two scenes).
 
 CRAFT: Training-Free Cascaded Retrieval for Tabular QA.
-This video explains, scene by scene, what each stage does, why it is there, and
-how the stages compose into one training-free retrieval pipeline. It is built to
-teach the idea with motion and as little text as possible.
 
-Render:
+Two scenes, both in the project's website palette on a near-black ground, in a
+3Blue1Brown register: one idea on screen at a time, slow smooth easing, a moving
+gold "query" dot that flows through the whole pipeline, and tables drawn as
+elegant glyphs rather than screen-filling grids.
+
+    CraftTeaser     — the one-breath cascade arc            (< 10 s)
+    CraftExplainer  — the full story, enrich → rank → QA    (~ 30 s)
+
+Render (manim is NOT a runtime dependency of the package — install it only to
+render, and keep all output on the big volume so it never fills the home disk):
+
     pip install manim
-    manim -qh media/craft_pipeline.py CraftPipeline      # 1080p
-    manim -qk media/craft_pipeline.py CraftPipeline      # 4k
-    manim -ql media/craft_pipeline.py CraftPipeline      # fast preview
+    export MEDIA_DIR=/mnt/data1/asing725/ACL/CRAFT/media/out
+    manim -qh --media_dir "$MEDIA_DIR" media/craft_pipeline.py CraftTeaser
+    manim -qh --media_dir "$MEDIA_DIR" media/craft_pipeline.py CraftExplainer
 
-The video is one Scene composed of ordered parts so the narrative flows:
-    1. The problem      - a question + a huge pile of tables.
-    2. Preprocessing    - enrich tables (title + description) and expand the query.
-    3. Stage 1 (SPLADE) - sparse lexical filter: everything -> 5,000 (high recall).
-    4. Stage 2 (Dense)  - mini-tables + sentence encoder: 5,000 -> 100 (semantic).
-    5. Stage 3 (Neural) - embedding rerank: 100 -> top-k (high precision).
-    6. Answer           - top-k mini-tables + question -> LLM -> answer.
-    7. The arc          - "high recall to high precision", training-free.
-
-Palette matches the paper figure and the project website.
+See media/STORYBOARD.md for the scene-by-scene plan this file implements.
 """
 
 import math
+import os
+import random
 
 import numpy as np
 from manim import *
 
-# ── Palette (from the CRAFT paper figure / website) ──────────────────────────
-BLUE = "#2f7fe0"
-NAVY = "#1e3a5f"
-GOLD = "#eab308"
-VIOLET = "#6d4bd6"
-TEAL = "#2e9bb0"
-PAGE = "#0e141d"      # dark ground, like the site's dark theme
-INK = "#e7eef8"
-MUTED = "#93a2b8"
-CELL = "#dbeafe"
+# Keep every render artifact on the large volume; the home disk is tight.
+config.media_dir = os.environ.get(
+    "MEDIA_DIR", os.path.join(os.path.dirname(__file__), "out")
+)
+
+# ── Palette (from the CRAFT paper figure / project website) ──────────────────
+BG = "#0e141d"      # near-black ground, the site's dark theme
+INK = "#e7eef8"     # primary text
+MUTED = "#93a2b8"   # captions / secondary text
+BLUE = "#6ea8fe"    # Stage 1 · SPLADE · recall
+GOLD = "#f5c542"    # the query, and Stage 2 survivors
+VIOLET = "#b090f5"  # LLM / Stage 3 embedding space
+TEAL = "#4bbcd0"    # sub-questions / the answer check
+CELL = "#1a2536"    # table body fill
+
+ICONS = os.path.join(os.path.dirname(__file__), "icons")
 
 
-def mini_table(width=0.7, height=0.5, header=BLUE, corner=VIOLET, body=CELL):
-    """A tiny table glyph: a header bar, a violet corner cell, a pale body.
+# ── Reusable glyphs ──────────────────────────────────────────────────────────
+def table_card(width=0.9, height=0.66, header=BLUE, corner=VIOLET,
+               body=CELL, rows=3, stroke=1.4):
+    """A table drawn as an elegant card, not a filled grid.
 
-    This is the paper's recurring table motif; we reuse it everywhere so the
-    viewer reads "table" instantly without any label.
+    A colored header bar, a violet corner cell, and a few faint row lines — it
+    reads as "a table" at a glance without ever holding real text (that lives on
+    the website). This is the recurring motif across both scenes.
     """
-    body_rect = Rectangle(width=width, height=height, stroke_width=1.2,
-                          stroke_color=NAVY, fill_color=body, fill_opacity=1)
-    header_rect = Rectangle(width=width, height=height * 0.28, stroke_width=1.2,
-                            stroke_color=NAVY, fill_color=header, fill_opacity=1)
-    header_rect.align_to(body_rect, UP)
-    corner_cell = Rectangle(width=width * 0.22, height=height * 0.28, stroke_width=1.2,
-                            stroke_color=NAVY, fill_color=corner, fill_opacity=1)
-    corner_cell.align_to(header_rect, UL)
-    return VGroup(body_rect, header_rect, corner_cell)
+    body_rect = RoundedRectangle(
+        width=width, height=height, corner_radius=0.06,
+        stroke_width=stroke, stroke_color=MUTED, fill_color=body, fill_opacity=1,
+    )
+    header_rect = Rectangle(
+        width=width, height=height * 0.26, stroke_width=0,
+        fill_color=header, fill_opacity=1,
+    ).align_to(body_rect, UP).align_to(body_rect, LEFT)
+    corner_cell = Rectangle(
+        width=width * 0.24, height=height * 0.26, stroke_width=0,
+        fill_color=corner, fill_opacity=1,
+    ).align_to(header_rect, UL)
+    lines = VGroup()
+    inner_top = header_rect.get_bottom()[1]
+    inner_bottom = body_rect.get_bottom()[1] + height * 0.12
+    for i in range(rows):
+        y = inner_top - (i + 1) * (inner_top - inner_bottom) / (rows + 1)
+        line = Line(
+            [body_rect.get_left()[0] + width * 0.12, y, 0],
+            [body_rect.get_right()[0] - width * 0.12, y, 0],
+            stroke_width=1.0, stroke_color=MUTED,
+        ).set_opacity(0.45)
+        lines.add(line)
+    return VGroup(body_rect, header_rect, corner_cell, lines)
 
 
-def stage_label(number, title, subtitle, color):
-    """A compact stage caption: 'STAGE n', a title, and a one-line role."""
-    tag = Text(f"STAGE {number}", font="sans-serif", weight=BOLD, color=color).scale(0.32)
-    name = Text(title, font="sans-serif", weight=BOLD, color=INK).scale(0.5)
-    role = Text(subtitle, font="sans-serif", color=MUTED).scale(0.3)
-    group = VGroup(tag, name, role).arrange(DOWN, buff=0.1, aligned_edge=LEFT)
-    return group
+def query_dot(color=GOLD, scale=1.0):
+    """The through-line: a small gold dot with a faint halo."""
+    dot = Dot(color=color, radius=0.09 * scale)
+    halo = Dot(color=color, radius=0.18 * scale).set_opacity(0.18)
+    return VGroup(halo, dot)
 
 
-class CraftPipeline(Scene):
-    def construct(self):
-        self.camera.background_color = PAGE
-        self.problem()
-        self.preprocessing()
-        self.stage_one()
-        self.stage_two()
-        self.stage_three()
-        self.answer()
-        self.closing_arc()
+def load_icon(name, color=INK, height=0.5):
+    """Load an SVG icon and tint it, or fall back to a labeled dot.
 
-    # ── 1. The problem ───────────────────────────────────────────────────────
-    def problem(self):
-        """A natural-language question must find its one table among many.
-
-        Establishes the task: open-domain table QA is a needle-in-a-haystack
-        retrieval problem before it is a reading problem.
-        """
-        title = Text("CRAFT", font="sans-serif", weight=BOLD, color=BLUE).scale(1.6)
-        sub = Text("Training-Free Cascaded Retrieval for Tabular QA",
-                   font="sans-serif", color=INK).scale(0.5)
-        VGroup(title, sub).arrange(DOWN, buff=0.3)
-        self.play(FadeIn(title, shift=UP * 0.3), run_time=0.8)
-        self.play(FadeIn(sub), run_time=0.6)
-        self.wait(0.6)
-        self.play(VGroup(title, sub).animate.scale(0.55).to_edge(UP), run_time=0.8)
-
-        question = Text('"where does the brazos river start and stop"',
-                        font="sans-serif", color=INK, slant=ITALIC).scale(0.55)
-        question.next_to(VGroup(title, sub), DOWN, buff=0.5)
-        self.play(Write(question), run_time=1.0)
-
-        # A large field of tables: the corpus (169K / 419K in practice).
-        pile = VGroup(*[mini_table() for _ in range(0, 84)])
-        pile.arrange_in_grid(rows=6, cols=14, buff=0.12).scale(0.72)
-        pile.next_to(question, DOWN, buff=0.5)
-        self.play(LaggedStart(*[FadeIn(t, scale=0.6) for t in pile],
-                              lag_ratio=0.01), run_time=1.6)
-        corpus_note = Text("hundreds of thousands of tables",
-                           font="sans-serif", color=MUTED).scale(0.34)
-        corpus_note.next_to(pile, DOWN, buff=0.25)
-        self.play(FadeIn(corpus_note), run_time=0.5)
-        self.wait(0.8)
-
-        self.q_text = question
-        self.header = VGroup(title, sub)
-        self.play(FadeOut(pile), FadeOut(corpus_note), run_time=0.7)
-
-    # ── 2. Preprocessing ─────────────────────────────────────────────────────
-    def preprocessing(self):
-        """Enrich both sides before retrieval so lexical + semantic matching work.
-
-        Why: tables often lack good titles and share little vocabulary with
-        questions. CRAFT closes that gap up front — an LLM writes a title and
-        description for every table and decomposes the query into sub-questions.
-        """
-        heading = Text("Preprocessing — enrich both sides",
-                       font="sans-serif", weight=BOLD, color=INK).scale(0.5)
-        heading.next_to(self.header, DOWN, buff=0.4)
-        self.play(FadeIn(heading), run_time=0.5)
-
-        # Left: a bare table gains a title + description.
-        bare = mini_table(width=1.1, height=0.8)
-        bare.move_to(LEFT * 3.2 + DOWN * 0.3)
-        arrow1 = Arrow(LEFT * 1.9, LEFT * 0.6, buff=0.1, color=GOLD, stroke_width=4)
-        arrow1.move_to(LEFT * 1.6 + DOWN * 0.3)
-        enriched = VGroup(
-            mini_table(width=1.1, height=0.8),
-            Text("Title", font="sans-serif", weight=BOLD, color=GOLD).scale(0.3),
-            Text("+ description", font="sans-serif", color=MUTED).scale(0.26),
+    Rendering is optional; if the icon file or the SVG loader is unavailable we
+    degrade to a simple placeholder so the scene still constructs.
+    """
+    path = os.path.join(ICONS, f"{name}.svg")
+    try:
+        icon = SVGMobject(path)
+        icon.set_stroke(color=color, width=2).set_fill(color, opacity=0)
+        # a couple of icons use filled dots for eyes / accents
+        for sub in icon.family_members_with_points():
+            if sub.get_fill_opacity() > 0:
+                sub.set_fill(color, opacity=1)
+        icon.set_height(height)
+        return icon
+    except Exception:
+        return VGroup(
+            Circle(radius=height / 2, color=color, stroke_width=2),
+            Text(name[:1].upper(), color=color).scale(height * 0.7),
         )
-        enriched[1:].arrange(DOWN, buff=0.08)
-        enriched.arrange(DOWN, buff=0.12)
-        enriched.move_to(LEFT * 0.2 + DOWN * 0.3)
-        gemini = Text("LLM", font="sans-serif", weight=BOLD, color=VIOLET).scale(0.3)
-        gemini.next_to(arrow1, UP, buff=0.12)
 
-        self.play(FadeIn(bare, shift=RIGHT * 0.2), run_time=0.5)
-        self.play(GrowArrow(arrow1), FadeIn(gemini), run_time=0.5)
-        self.play(FadeIn(enriched, shift=RIGHT * 0.2), run_time=0.6)
 
-        # Right: the query expands into sub-questions.
-        q_small = self.q_text.copy().scale(0.7).move_to(RIGHT * 2.2 + UP * 0.4)
-        subq = VGroup(
-            Text("→ source location?", font="sans-serif", color=TEAL).scale(0.34),
-            Text("→ mouth location?", font="sans-serif", color=TEAL).scale(0.34),
-        ).arrange(DOWN, buff=0.12, aligned_edge=LEFT)
-        subq.next_to(q_small, DOWN, buff=0.25, aligned_edge=LEFT)
-        self.play(TransformFromCopy(self.q_text, q_small), run_time=0.6)
-        self.play(LaggedStart(*[FadeIn(s, shift=RIGHT * 0.2) for s in subq],
-                              lag_ratio=0.3), run_time=0.8)
+def caption(text, color=MUTED, scale=0.34):
+    return Text(text, font="sans-serif", color=color).scale(scale)
+
+
+def stage_label(number, title, color):
+    tag = Text(f"STAGE {number}", font="sans-serif", weight=BOLD, color=color).scale(0.30)
+    name = Text(title, font="sans-serif", weight=BOLD, color=INK).scale(0.42)
+    return VGroup(tag, name).arrange(DOWN, buff=0.08, aligned_edge=LEFT)
+
+
+# The real example threaded through both scenes (NQ, Brazos River query).
+QUESTION = "where does the brazos river start and stop"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Scene A — CraftTeaser  (< 10 s)
+# ══════════════════════════════════════════════════════════════════════════════
+class CraftTeaser(Scene):
+    """The one-breath arc: a question funnels through three ever-finer stages to
+    a short answer set. No enrichment, no QA — just the cascade *shape*."""
+
+    def construct(self):
+        self.camera.background_color = BG
+        random.seed(11)
+
+        # A1 · a gold query dot, and a loose cloud of faint table glyphs.
+        q = query_dot(scale=1.2).move_to(LEFT * 4.2)
+        self.play(FadeIn(q, scale=0.6), run_time=0.7)
+
+        cloud = VGroup(*[table_card(rows=2) for _ in range(24)])
+        for card in cloud:
+            card.scale(0.42).move_to([
+                random.uniform(-0.5, 4.6), random.uniform(-2.6, 2.6), 0
+            ]).set_opacity(0.55)
+        self.play(
+            LaggedStart(*[FadeIn(c, scale=0.7) for c in cloud], lag_ratio=0.03),
+            run_time=1.2,
+        )
+
+        label = Text("SPLADE", font="sans-serif", weight=BOLD, color=BLUE).scale(0.5)
+        label.to_edge(UP, buff=0.7)
+        cap = caption("wide net").to_edge(DOWN, buff=0.7)
+
+        # A2 · wide ripple; most dim, ~8 stay lit (blue) and slide into an arc.
+        self.play(FadeIn(label), FadeIn(cap), run_time=0.5)
+        ripple = Circle(radius=0.1, color=BLUE, stroke_width=3).move_to(q.get_center())
+        kept = VGroup(*cloud[:8])
+        dropped = VGroup(*cloud[8:])
+        self.play(
+            ripple.animate.scale(70).set_opacity(0),
+            kept.animate.set_stroke(BLUE, width=2.4).set_opacity(1),
+            dropped.animate.set_opacity(0.08),
+            run_time=1.3, rate_func=smooth,
+        )
+        arc_pts = [
+            [1.8 + 1.6 * math.cos(a), 1.6 * math.sin(a), 0]
+            for a in np.linspace(-1.0, 1.0, 8)
+        ]
+        self.play(
+            *[kept[i].animate.move_to(arc_pts[i]) for i in range(8)],
+            FadeOut(dropped), run_time=0.9, rate_func=smooth,
+        )
+
+        # A3 · label morphs; survivors collapse, row-lines flicker, 4 remain (gold).
+        label2 = Text("Dense", font="sans-serif", weight=BOLD, color=GOLD).scale(0.5).move_to(label)
+        cap2 = caption("by meaning").move_to(cap)
+        self.play(Transform(label, label2), Transform(cap, cap2), run_time=0.5)
+        survivors = VGroup(*kept[:4])
+        gone = VGroup(*kept[4:])
+        for card in kept:
+            card[3].set_stroke(GOLD, width=1.4)  # flicker the row-lines
+        self.play(kept[0][3].animate.set_opacity(1), rate_func=there_and_back, run_time=0.4)
+        col = [UP * 1.35, UP * 0.45, DOWN * 0.45, DOWN * 1.35]
+        self.play(
+            *[survivors[i].animate.move_to(RIGHT * 1.4 + col[i]).set_stroke(GOLD, width=2.4)
+              for i in range(4)],
+            FadeOut(gone), run_time=1.0, rate_func=smooth,
+        )
+
+        # A4 · label morphs; the 4 line up, a violet sweep orders them, top ★.
+        label3 = Text("Rerank", font="sans-serif", weight=BOLD, color=VIOLET).scale(0.5).move_to(label)
+        cap3 = caption("precise top-k").move_to(cap)
+        self.play(Transform(label, label3), Transform(cap, cap3), run_time=0.5)
+        sweep = Line(LEFT * 0.6, RIGHT * 0.6, stroke_width=3, color=VIOLET)
+        sweep.set_opacity(0.8).move_to(RIGHT * 1.4 + UP * 1.9)
+        self.play(sweep.animate.move_to(RIGHT * 1.4 + DOWN * 1.9), run_time=0.9, rate_func=smooth)
+        ranks = VGroup(*[
+            Text(str(i + 1), font="sans-serif", color=MUTED).scale(0.3)
+            .next_to(survivors[i], LEFT, buff=0.2)
+            for i in range(3)
+        ])
+        star = Star(n=5, outer_radius=0.16, color=GOLD, fill_opacity=1)
+        star.next_to(survivors[0], LEFT, buff=0.2)
+        self.play(FadeOut(sweep), LaggedStart(*[FadeIn(r) for r in ranks], lag_ratio=0.2),
+                  run_time=0.6)
+        self.play(FadeIn(star, scale=0.5), ranks[0].animate.set_opacity(0), run_time=0.4)
+
+        # A5 · a faint funnel is traced behind: recall (wide) → precision (narrow).
+        self.play(
+            FadeOut(VGroup(q, survivors, ranks, star)),
+            FadeOut(label), FadeOut(cap), run_time=0.6,
+        )
+        top = Line(LEFT * 4 + UP * 1.6, RIGHT * 4 + UP * 0.5, stroke_width=3)
+        bot = Line(LEFT * 4 + DOWN * 1.6, RIGHT * 4 + DOWN * 0.5, stroke_width=3)
+        for f in (top, bot):
+            f.set_stroke([BLUE, GOLD, VIOLET])
+        lft = caption("recall", BLUE).next_to(top, LEFT, buff=0.2).shift(DOWN * 1.6)
+        rgt = caption("precision", VIOLET).next_to(top, RIGHT, buff=0.2).shift(DOWN * 0.6)
+        wordmark = Text("CRAFT", font="sans-serif", weight=BOLD, color=INK).scale(1.3)
+        self.play(Create(top), Create(bot), FadeIn(lft), FadeIn(rgt), run_time=1.0)
+        self.play(Write(wordmark), run_time=0.9)
         self.wait(0.9)
 
-        self.play(FadeOut(VGroup(heading, bare, arrow1, gemini, enriched, q_small, subq)),
-                  run_time=0.6)
 
-    # ── 3. Stage 1: SPLADE (sparse) ──────────────────────────────────────────
-    def stage_one(self):
-        """Sparse lexical retrieval — cast a wide, cheap net for high recall.
+# ══════════════════════════════════════════════════════════════════════════════
+# Scene B — CraftExplainer  (~ 30 s)
+# ══════════════════════════════════════════════════════════════════════════════
+class CraftExplainer(Scene):
+    """The full story, minimal per beat: enrich → SPLADE (recall) → semantic row
+    filtering (noise↓) → rerank (top-k) → the QA payoff."""
 
-        Why first: SPLADE scores the whole corpus with a sparse, memory-light
-        representation, so it can afford to look at every table. Its job is not
-        precision but recall — keep the gold table in a much smaller shortlist.
-        """
-        label = stage_label("1", "SPLADE — sparse lexical",
-                            "scan everything, keep the top 5,000  ·  high recall", BLUE)
-        label.to_edge(LEFT).shift(UP * 2.2)
-        self.play(FadeIn(label), run_time=0.5)
+    def construct(self):
+        self.camera.background_color = BG
+        random.seed(23)
+        self.b0_problem()
+        self.b1_enrichment()
+        self.b2_splade()
+        self.b3_row_filter()
+        self.b4_rerank()
+        self.b5_payoff()
 
-        many = VGroup(*[mini_table() for _ in range(0, 70)])
-        many.arrange_in_grid(rows=5, cols=14, buff=0.12).scale(0.7)
-        many.move_to(DOWN * 0.4)
-        self.play(LaggedStart(*[FadeIn(t) for t in many], lag_ratio=0.008),
-                  run_time=1.0)
+    # B0 · the problem (0–3s)
+    def b0_problem(self):
+        question = Text(f'"{QUESTION}"', font="sans-serif", color=INK,
+                        slant=ITALIC).scale(0.6).to_edge(UP, buff=1.0)
+        self.play(Write(question), run_time=1.2)
 
-        # A sparse "term match" sweep highlights a subset, the rest dim away.
-        keep = many[:16]
-        drop = many[16:]
-        self.play(
-            keep.animate.set_stroke(color=BLUE, width=2.5),
-            run_time=0.6,
-        )
-        self.play(drop.animate.set_opacity(0.12), run_time=0.7)
-        count = Text("5,000", font="sans-serif", weight=BOLD, color=BLUE).scale(0.5)
-        count.next_to(many, DOWN, buff=0.3)
-        self.play(FadeIn(count, shift=UP * 0.2), run_time=0.5)
-        self.wait(0.8)
+        field = VGroup(*[table_card(rows=2) for _ in range(60)])
+        for card in field:
+            card.scale(0.3).move_to([
+                random.uniform(-6, 6), random.uniform(-3, 1.4), 0
+            ]).set_opacity(0.28)
+        self.play(LaggedStart(*[FadeIn(c) for c in field], lag_ratio=0.006), run_time=1.2)
+        counter = caption("169K tables", MUTED).next_to(question, DOWN, buff=0.4)
+        self.play(FadeIn(counter), run_time=0.4)
 
-        # Collapse the survivors into a tidy shortlist to carry into Stage 2.
-        shortlist = keep.copy()
-        self.play(FadeOut(drop), FadeOut(count), FadeOut(label), run_time=0.5)
-        self.stage1_out = shortlist
-        self.play(shortlist.animate.arrange_in_grid(rows=2, cols=8, buff=0.14)
-                  .scale(1.0).move_to(ORIGIN), run_time=0.8)
-
-    # ── 4. Stage 2: mini-tables + dense encoder ──────────────────────────────
-    def stage_two(self):
-        """Build mini-tables and rerank them semantically — meaning over words.
-
-        Why here: lexical overlap misses paraphrases and numeric/semantic cues.
-        CRAFT compresses each candidate to a mini-table (its most query-relevant
-        rows + headers) and scores it with a sentence encoder, narrowing 5,000
-        to 100 by meaning, not just shared terms.
-        """
-        label = stage_label("2", "Dense reranking — mini-tables",
-                            "compress to key rows, rank by meaning  ·  5,000 → 100", GOLD)
-        label.to_edge(LEFT).shift(UP * 2.2)
-        self.play(FadeIn(label), run_time=0.5)
-
-        # Show one candidate shrinking to a mini-table (top rows + headers).
-        focus = self.stage1_out[0].copy().set_opacity(1)
-        self.play(self.stage1_out.animate.set_opacity(0.25), run_time=0.4)
-        self.play(focus.animate.scale(2.4).move_to(LEFT * 3 + DOWN * 0.3), run_time=0.6)
-        rows = VGroup(*[
-            Rectangle(width=1.4, height=0.16, stroke_width=1, stroke_color=NAVY,
-                      fill_color=CELL, fill_opacity=1)
-            for _ in range(5)
-        ]).arrange(DOWN, buff=0.05)
-        rows.next_to(focus, RIGHT, buff=0.6)
-        rows[0].set_fill(BLUE)  # header row
-        mini_label = Text("mini-table", font="sans-serif", color=GOLD).scale(0.3)
-        mini_label.next_to(rows, DOWN, buff=0.15)
-        self.play(TransformFromCopy(focus, rows), FadeIn(mini_label), run_time=0.8)
-
-        encoder = Text("Sentence Transformer", font="sans-serif", weight=BOLD,
-                       color=TEAL).scale(0.34)
-        encoder.move_to(RIGHT * 3 + UP * 0.2)
-        q_dot = Dot(color=INK).scale(0.8).next_to(encoder, DOWN, buff=0.3)
-        q_tag = Text("query", font="sans-serif", color=MUTED).scale(0.26).next_to(q_dot, RIGHT, buff=0.15)
-        self.play(FadeIn(encoder), FadeIn(q_dot), FadeIn(q_tag), run_time=0.5)
+        q = query_dot(scale=1.2).move_to(question.get_bottom() + DOWN * 0.15)
+        self.play(FadeIn(q, scale=0.5), run_time=0.4)
+        self.play(q.animate.move_to(DOWN * 1.2), run_time=0.7, rate_func=smooth)
+        cap = caption("find the one table that answers it").to_edge(DOWN, buff=0.6)
+        self.play(FadeIn(cap), run_time=0.4)
         self.wait(0.6)
 
-        self.play(FadeOut(VGroup(focus, rows, mini_label, encoder, q_dot, q_tag)),
-                  run_time=0.5)
-        keep = self.stage1_out[:8]
-        drop = self.stage1_out[8:]
-        self.play(keep.animate.set_opacity(1).set_stroke(color=GOLD, width=2.5),
-                  drop.animate.set_opacity(0.08), run_time=0.7)
-        count = Text("100", font="sans-serif", weight=BOLD, color=GOLD).scale(0.5)
-        count.next_to(self.stage1_out, DOWN, buff=0.3)
-        self.play(FadeIn(count), run_time=0.4)
-        self.wait(0.7)
+        self.play(FadeOut(field), FadeOut(counter), FadeOut(cap),
+                  question.animate.scale(0.7).to_edge(UP, buff=0.5), run_time=0.7)
+        self.q = q
+        self.question = question
 
-        self.stage2_out = keep.copy()
-        self.play(FadeOut(drop), FadeOut(count), FadeOut(label), run_time=0.5)
-        self.play(self.stage2_out.animate.arrange(RIGHT, buff=0.2).scale(1.1)
-                  .move_to(ORIGIN), run_time=0.7)
+    # B1 · enrichment (3–8s) — why recall improves
+    def b1_enrichment(self):
+        head = Text("Enrich both sides", font="sans-serif", weight=BOLD,
+                    color=INK).scale(0.44).next_to(self.question, DOWN, buff=0.4)
+        self.play(FadeIn(head), run_time=0.4)
 
-    # ── 5. Stage 3: neural rerank (embeddings) ───────────────────────────────
-    def stage_three(self):
-        """A strong embedding model orders the finalists — high precision.
+        bare = table_card(width=1.5, height=1.05, rows=3).move_to(LEFT * 3.2 + DOWN * 0.6)
+        self.play(self.q.animate.move_to(RIGHT * 3.0 + DOWN * 0.3), FadeIn(bare), run_time=0.6)
 
-        Why last: it is the most expensive model, so CRAFT only runs it on the
-        100 survivors. It re-embeds each mini-table and the query in a rich
-        semantic space to get the final top-k ordering right.
-        """
-        label = stage_label("3", "Neural reranking — embeddings",
-                            "precise final ordering  ·  100 → top-k", VIOLET)
-        label.to_edge(LEFT).shift(UP * 2.2)
-        self.play(FadeIn(label), run_time=0.5)
+        llm = load_icon("llm", VIOLET, height=0.6).next_to(bare, UP, buff=0.35)
+        self.play(FadeIn(llm, shift=DOWN * 0.15), run_time=0.5)
 
-        space = Circle(radius=1.9, stroke_color=VIOLET, stroke_width=1.5,
-                       fill_opacity=0.05, fill_color=VIOLET).move_to(DOWN * 0.3)
-        space_label = Text("embedding space", font="sans-serif", color=MUTED).scale(0.28)
-        space_label.next_to(space, DOWN, buff=0.15)
-        self.play(Create(space), FadeIn(space_label), run_time=0.6)
+        # A title ribbon + faint description lines grow onto the card.
+        ribbon = Rectangle(width=1.3, height=0.16, stroke_width=0,
+                           fill_color=GOLD, fill_opacity=0.9).move_to(bare.get_top() + DOWN * 0.5)
+        desc = VGroup(*[
+            Line(LEFT * 0.5, RIGHT * 0.5, stroke_width=2, color=MUTED).set_opacity(0.5)
+            for _ in range(3)
+        ]).arrange(DOWN, buff=0.1).next_to(ribbon, DOWN, buff=0.12)
+        self.play(GrowFromCenter(ribbon), run_time=0.4)
+        self.play(LaggedStart(*[Create(l) for l in desc], lag_ratio=0.2), run_time=0.6)
+        self.play(bare[1].animate.set_fill(BLUE, opacity=1), run_time=0.3)
 
-        # Scatter the finalists as points; the query is the center of attention.
-        import random
-        random.seed(7)
+        # The query sprouts one sub-question branch.
+        branch = Line(self.q.get_center(), self.q.get_center() + RIGHT * 1.1 + DOWN * 0.5,
+                      stroke_width=2, color=TEAL)
+        subq = caption("→ source? → mouth?", TEAL, 0.3).next_to(branch.get_end(), RIGHT, buff=0.1)
+        self.play(Create(branch), FadeIn(subq), run_time=0.6)
+
+        cap = caption("LLM titles & sub-questions give the sparse model more to match")
+        cap.to_edge(DOWN, buff=0.6)
+        self.play(FadeIn(cap), run_time=0.5)
+        self.wait(0.8)
+
+        self.play(
+            FadeOut(VGroup(head, bare, llm, ribbon, desc, branch, subq, cap)),
+            self.q.animate.move_to(LEFT * 5).set_opacity(1), run_time=0.6,
+        )
+
+    # B2 · Stage 1 · SPLADE (8–13s) — recall, wide net
+    def b2_splade(self):
+        label = stage_label("1", "SPLADE", BLUE).next_to(self.question, DOWN, buff=0.35).to_edge(LEFT, buff=0.7)
+        self.play(FadeIn(label), run_time=0.4)
+
+        field = VGroup(*[table_card(rows=2) for _ in range(48)])
+        for card in field:
+            card.scale(0.34).move_to([
+                random.uniform(-2.5, 5.5), random.uniform(-2.6, 1.6), 0
+            ]).set_opacity(0.4)
+        self.play(LaggedStart(*[FadeIn(c) for c in field], lag_ratio=0.008), run_time=0.9)
+
+        ripple = Circle(radius=0.1, color=BLUE, stroke_width=3).move_to(self.q.get_center())
+        kept = VGroup(*field[:8])
+        dropped = VGroup(*field[8:])
+        self.play(
+            ripple.animate.scale(90).set_opacity(0),
+            dropped.animate.set_opacity(0.06),
+            kept.animate.set_stroke(BLUE, width=2.2).set_opacity(1),
+            run_time=1.3, rate_func=smooth,
+        )
+        self.play(
+            kept.animate.arrange(DOWN, buff=0.18).scale(1.1).move_to(RIGHT * 3.5),
+            FadeOut(dropped), run_time=0.9, rate_func=smooth,
+        )
+        brace = Brace(kept, LEFT, color=MUTED)
+        band = caption("5,000 kept", MUTED, 0.3).next_to(brace, LEFT, buff=0.15)
+        cap = caption("cast a wide, cheap net — keep recall high").to_edge(DOWN, buff=0.6)
+        self.play(FadeIn(brace), FadeIn(band), FadeIn(cap), run_time=0.5)
+        self.wait(0.8)
+
+        self.play(FadeOut(VGroup(label, brace, band, cap)), run_time=0.4)
+        self.stage1 = kept
+
+    # B3 · Stage 2 · semantic row filtering (13–20s) — noise down
+    def b3_row_filter(self):
+        label = stage_label("2", "Dense · mini-tables", GOLD).next_to(self.question, DOWN, buff=0.35).to_edge(LEFT, buff=0.7)
+        self.play(FadeIn(label), run_time=0.4)
+
+        # Zoom into ONE survivor; its rows fan out and are scored by the query.
+        focus = self.stage1[0]
+        self.play(self.stage1[1:].animate.set_opacity(0.2), run_time=0.4)
+        big = focus.copy().set_opacity(1)
+        self.play(big.animate.scale(2.6).move_to(LEFT * 3.2 + DOWN * 0.2), run_time=0.6)
+
+        rows = VGroup(*[
+            Rectangle(width=2.0, height=0.22, stroke_width=1, stroke_color=MUTED,
+                      fill_color=CELL, fill_opacity=1)
+            for _ in range(6)
+        ]).arrange(DOWN, buff=0.06).next_to(big, RIGHT, buff=0.7)
+        rows[0].set_fill(BLUE)  # header row
+        self.play(TransformFromCopy(big, rows), run_time=0.7)
+
+        # The query scores each row; top rows light gold, the rest fade.
+        q_here = self.q.copy().next_to(rows, RIGHT, buff=0.5)
+        self.play(FadeIn(q_here), run_time=0.3)
+        lit = [1, 3]  # the rows that matter
+        self.play(
+            *[rows[i].animate.set_fill(GOLD, opacity=0.85) for i in lit],
+            *[rows[i].animate.set_opacity(0.15) for i in (2, 4, 5)],
+            run_time=0.8,
+        )
+        mini = VGroup(rows[0].copy(), rows[1].copy(), rows[3].copy())
+        self.play(
+            FadeOut(rows), FadeOut(q_here),
+            mini.animate.arrange(DOWN, buff=0.04).move_to(rows.get_center()),
+            run_time=0.7,
+        )
+        mini_cap = caption("mini-table", GOLD, 0.3).next_to(mini, DOWN, buff=0.15)
+        self.play(FadeIn(mini_cap), run_time=0.3)
+        self.wait(0.5)
+
+        # Pull back: the column of ~8 becomes ~4 compact mini-tables (gold).
+        self.play(FadeOut(VGroup(big, mini, mini_cap)), run_time=0.4)
+        minis = VGroup(*[table_card(width=0.9, height=0.5, header=GOLD, rows=2)
+                         for _ in range(4)])
+        minis.arrange(DOWN, buff=0.2).move_to(RIGHT * 3.5)
+        for m in minis:
+            m.set_stroke(GOLD, width=2.2)
+        self.play(FadeOut(self.stage1), LaggedStart(*[FadeIn(m, scale=0.8) for m in minis],
+                                                    lag_ratio=0.12), run_time=0.8)
+        cap = caption("keep only the rows that matter — less noise, sharper matches")
+        cap.to_edge(DOWN, buff=0.6)
+        self.play(FadeIn(cap), run_time=0.5)
+        self.wait(0.8)
+
+        self.play(FadeOut(VGroup(label, cap)), run_time=0.4)
+        self.stage2 = minis
+
+    # B4 · Stage 3 · rerank (20–25s) — top-k
+    def b4_rerank(self):
+        label = stage_label("3", "Rerank", VIOLET).next_to(self.question, DOWN, buff=0.35).to_edge(LEFT, buff=0.7)
+        self.play(FadeIn(label), run_time=0.4)
+
+        space = Circle(radius=2.0, stroke_color=VIOLET, stroke_width=1.5,
+                       fill_opacity=0.05, fill_color=VIOLET).move_to(RIGHT * 1.0 + DOWN * 0.2)
+        space_cap = caption("embedding space", MUTED, 0.28).next_to(space, DOWN, buff=0.15)
+        self.play(Create(space), FadeIn(space_cap), run_time=0.6)
+
+        q_center = query_dot(scale=1.3).move_to(space.get_center())
         pts = VGroup()
-        for _ in range(8):
-            r = random.uniform(0.3, 1.7)
+        for _ in range(4):
+            r = random.uniform(0.5, 1.7)
             a = random.uniform(0, TAU)
             pts.add(Dot([r * math.cos(a) + space.get_x(),
-                         r * math.sin(a) + space.get_y(), 0],
-                        color=BLUE).scale(0.7))
-        q_dot = Dot(space.get_center(), color=GOLD).scale(1.1)
-        self.play(LaggedStart(*[FadeIn(p) for p in pts], lag_ratio=0.1),
-                  FadeIn(q_dot), run_time=0.8)
+                         r * math.sin(a) + space.get_y(), 0], color=GOLD).scale(0.9))
+        self.play(
+            ReplacementTransform(self.stage2, pts), FadeIn(q_center), run_time=0.9,
+        )
 
-        # Rank by distance to the query: nearest few become the top-k.
-        dists = sorted(pts, key=lambda p: np.linalg.norm(p.get_center() - q_dot.get_center()))
-        topk = VGroup(*dists[:3])
-        self.play(topk.animate.set_color(GOLD).scale(1.3),
-                  *[Create(Line(q_dot.get_center(), p.get_center(),
-                                stroke_width=1.5, color=GOLD)) for p in topk],
-                  run_time=0.8)
-        star = Star(n=5, outer_radius=0.18, color=GOLD, fill_opacity=1)
-        star.move_to(dists[0].get_center())
-        self.play(FadeIn(star, scale=0.5), run_time=0.4)
-        count = Text("top-k", font="sans-serif", weight=BOLD, color=VIOLET).scale(0.5)
-        count.next_to(space, RIGHT, buff=0.6)
-        self.play(FadeIn(count), run_time=0.4)
-        self.wait(0.9)
+        # Order by distance to the query; nearest 3 line up, #1 gets a ★.
+        dists = sorted(pts, key=lambda p: np.linalg.norm(p.get_center() - q_center[1].get_center()))
+        near = VGroup(*dists[:3])
+        self.play(
+            *[Create(Line(q_center.get_center(), p.get_center(), stroke_width=1.4,
+                          color=VIOLET).set_opacity(0.6)) for p in near],
+            near.animate.set_color(GOLD), run_time=0.8,
+        )
+        star = Star(n=5, outer_radius=0.16, color=GOLD, fill_opacity=1).move_to(dists[0].get_center())
+        answer = caption("Brazos River", GOLD, 0.3).next_to(dists[0], UP, buff=0.2)
+        self.play(FadeIn(star, scale=0.5), FadeIn(answer), run_time=0.5)
 
-        self.play(FadeOut(VGroup(space, space_label, pts, q_dot, topk, star, count, label)),
-                  FadeOut(self.stage2_out), run_time=0.6)
-
-    # ── 6. Answer generation ─────────────────────────────────────────────────
-    def answer(self):
-        """Top-k mini-tables + the question feed an LLM to produce the answer.
-
-        Why mini-tables: passing compact, most-relevant rows (not whole tables)
-        keeps the context small so smaller LLMs can answer accurately.
-        """
-        heading = Text("Answer generation", font="sans-serif", weight=BOLD,
-                       color=INK).scale(0.5).next_to(self.header, DOWN, buff=0.5)
-        self.play(FadeIn(heading), run_time=0.5)
-
-        topk = VGroup(*[mini_table(width=1.0, height=0.72) for _ in range(3)])
-        topk.arrange(RIGHT, buff=0.3).move_to(LEFT * 3 + DOWN * 0.3)
-        star = Star(n=5, outer_radius=0.13, color=GOLD, fill_opacity=1)
-        star.move_to(topk[0].get_top())
-        arrow = Arrow(LEFT * 1.1, RIGHT * 0.6, color=BLUE, stroke_width=4).move_to(DOWN * 0.3)
-        llm = Text("LLM", font="sans-serif", weight=BOLD, color=VIOLET).scale(0.4)
-        llm.next_to(arrow, UP, buff=0.15)
-        ans = VGroup(
-            Text("Answer", font="sans-serif", weight=BOLD, color=GOLD).scale(0.4),
-            Text("✓", color=TEAL).scale(0.6),
-        ).arrange(RIGHT, buff=0.2).move_to(RIGHT * 3 + DOWN * 0.3)
-
-        self.play(FadeIn(topk), FadeIn(star), run_time=0.6)
-        self.play(GrowArrow(arrow), FadeIn(llm), run_time=0.5)
-        self.play(FadeIn(ans, shift=RIGHT * 0.3), run_time=0.6)
+        note = caption("any reranker / embedding model", MUTED, 0.26).set_opacity(0.7)
+        note.next_to(space, UP, buff=0.2)
+        cap = caption("a stronger model — run only on the finalists — sets the final order")
+        cap.to_edge(DOWN, buff=0.6)
+        self.play(FadeIn(note), FadeIn(cap), run_time=0.5)
         self.wait(1.0)
-        self.play(FadeOut(VGroup(heading, topk, star, arrow, llm, ans)), run_time=0.6)
 
-    # ── 7. The arc ───────────────────────────────────────────────────────────
-    def closing_arc(self):
-        """One line that captures the design: recall first, precision last.
+        self.play(FadeOut(VGroup(label, space, space_cap, q_center, pts, star,
+                                 answer, note, cap)), run_time=0.6)
 
-        Each stage uses a more expressive (and costlier) model than the last, but
-        on a progressively smaller set — recall is protected early, precision is
-        earned late, and no stage is fine-tuned.
-        """
-        bar_w = 8.0
-        track = Line(LEFT * bar_w / 2, RIGHT * bar_w / 2, stroke_width=6,
-                     color=MUTED).move_to(DOWN * 0.2)
-        grad = track.copy().set_stroke(
-            color=[BLUE, GOLD, VIOLET], width=6)
-        left = Text("high recall", font="sans-serif", color=BLUE).scale(0.4)
-        right = Text("high precision", font="sans-serif", color=VIOLET).scale(0.4)
-        left.next_to(track, LEFT, buff=0.3)
-        right.next_to(track, RIGHT, buff=0.3)
+    # B5 · the payoff (25–30s) — deeper recall + better QA
+    def b5_payoff(self):
+        # Left payoff: a recall curve rises and the marker lands past @5.
+        axes = VGroup(
+            Line(LEFT * 6 + DOWN * 1.5, LEFT * 6 + UP * 1.2, stroke_width=2, color=MUTED),
+            Line(LEFT * 6 + DOWN * 1.5, LEFT * 1.8 + DOWN * 1.5, stroke_width=2, color=MUTED),
+        )
+        curve = VMobject(stroke_color=BLUE, stroke_width=4)
+        curve.set_points_smoothly([
+            LEFT * 6 + DOWN * 1.2, LEFT * 4.7 + DOWN * 0.2,
+            LEFT * 3.4 + UP * 0.5, LEFT * 1.8 + UP * 0.85,
+        ])
+        depth = caption("recall at greater depth", MUTED, 0.3).next_to(axes, DOWN, buff=0.2).shift(RIGHT * 1.5)
+        marker = Dot(LEFT * 1.8 + UP * 0.85, color=GOLD).scale(1.1)
+        at5 = caption("@5+", GOLD, 0.28).next_to(marker, RIGHT, buff=0.1)
+        self.play(Create(axes), run_time=0.4)
+        self.play(Create(curve), run_time=1.0)
+        self.play(FadeIn(marker, scale=0.5), FadeIn(at5), FadeIn(depth), run_time=0.4)
 
-        s1 = Text("SPLADE", font="sans-serif", color=BLUE).scale(0.32).move_to(track.point_from_proportion(0.16) + UP * 0.4)
-        s2 = Text("Dense", font="sans-serif", color=GOLD).scale(0.32).move_to(track.point_from_proportion(0.5) + UP * 0.4)
-        s3 = Text("Neural", font="sans-serif", color=VIOLET).scale(0.32).move_to(track.point_from_proportion(0.84) + UP * 0.4)
+        # Right payoff: three mini-tables fit an LLM-context bracket; two full
+        # tables overflowed it → a green check.
+        bracket = VGroup(
+            Line(UP * 1.2, DOWN * 1.2, stroke_width=2, color=MUTED),
+            Line(UP * 1.2, UP * 1.2 + RIGHT * 0.2, stroke_width=2, color=MUTED),
+            Line(DOWN * 1.2, DOWN * 1.2 + RIGHT * 0.2, stroke_width=2, color=MUTED),
+        ).move_to(RIGHT * 2.6)
+        ctx = caption("LLM context", MUTED, 0.28).next_to(bracket, UP, buff=0.15)
+        minis = VGroup(*[table_card(width=1.1, height=0.42, header=GOLD, rows=1)
+                         for _ in range(3)])
+        minis.arrange(DOWN, buff=0.14).next_to(bracket, RIGHT, buff=0.25)
+        for m in minis:
+            m.set_stroke(GOLD, width=2)
+        self.play(Create(bracket), FadeIn(ctx), run_time=0.4)
+        self.play(LaggedStart(*[FadeIn(m, shift=LEFT * 0.2) for m in minis],
+                              lag_ratio=0.15), run_time=0.7)
+        check = load_icon("check", TEAL, height=0.5).next_to(minis, RIGHT, buff=0.35)
+        self.play(FadeIn(check, scale=0.6), run_time=0.4)
+        self.wait(0.8)
 
-        self.play(Create(track), FadeIn(left), FadeIn(right), run_time=0.7)
-        self.play(Create(grad), LaggedStart(FadeIn(s1), FadeIn(s2), FadeIn(s3),
-                                            lag_ratio=0.3), run_time=1.0)
-
-        tagline = Text("Off-the-shelf models, cascaded. No fine-tuning.",
-                       font="sans-serif", color=INK).scale(0.42)
-        tagline.next_to(track, DOWN, buff=0.7)
-        self.play(Write(tagline), run_time=1.0)
-        self.wait(1.4)
-        self.play(FadeOut(VGroup(track, grad, left, right, s1, s2, s3, tagline)),
-                  FadeOut(self.header), run_time=0.8)
+        # Condense to the wordmark + one line.
+        self.play(FadeOut(VGroup(axes, curve, marker, at5, depth, bracket, ctx, minis, check),
+                          shift=DOWN * 0.2), FadeOut(self.question), run_time=0.6)
+        wordmark = Text("CRAFT", font="sans-serif", weight=BOLD, color=INK).scale(1.3).shift(UP * 0.4)
+        line = caption("cascade to cut noise — spend big models only on the top candidates",
+                       INK, 0.4).next_to(wordmark, DOWN, buff=0.4)
+        self.play(Write(wordmark), run_time=0.8)
+        self.play(FadeIn(line), run_time=0.6)
+        self.wait(2.0)
