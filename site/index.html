@@ -85,14 +85,20 @@
     }
     .brand { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 1.15rem; color: var(--ink); }
     .brand .c { color: var(--blue); }
-    .tabs { display: flex; gap: 0.3rem; margin-left: 0.6rem; }
-    .tab-btn {
-      font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600;
-      color: var(--muted); background: none; border: none; cursor: pointer;
-      padding: 0.45rem 0.9rem; border-radius: 0.5rem;
+    /* Prominent segmented Demo/Paper control */
+    .segmented {
+      display: inline-flex; gap: 2px; margin-left: 0.9rem; padding: 3px;
+      background: var(--surface-soft); border: 1px solid var(--border); border-radius: 0.6rem;
     }
-    .tab-btn:hover { color: var(--ink); background: var(--surface-soft); }
-    .tab-btn.active { color: var(--blue); background: var(--surface-soft); }
+    .seg-btn {
+      font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 700;
+      color: var(--muted); background: none; border: none; cursor: pointer;
+      padding: 0.4rem 1.15rem; border-radius: 0.45rem; transition: color .15s, background .15s;
+    }
+    .seg-btn:hover { color: var(--ink); }
+    .seg-btn.active { color: #fff; background: var(--blue); box-shadow: 0 1px 4px var(--shadow); }
+    :root[data-theme="dark"] .seg-btn.active { color: #0e141d; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg-btn.active { color: #0e141d; } }
     .topbar-spacer { flex: 1; }
     .topbar a.ghost { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
     .topbar a.ghost:hover { color: var(--blue); text-decoration: none; }
@@ -147,6 +153,105 @@
     .h-sec { font-size: 1.45rem; margin-bottom: 0.3rem; }
     .lead { color: var(--body); font-size: 0.98rem; max-width: 62ch; }
     .divider { border: none; border-top: 1px solid var(--border); margin: 2.4rem 0; }
+
+    /* ─── Pipeline animation ─────────────────── */
+    .anim {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
+      box-shadow: 0 8px 30px var(--shadow); overflow: hidden; margin-bottom: 1.4rem;
+    }
+    .anim-stage {
+      position: relative; min-height: 340px; padding: 1.1rem 1.2rem 0.6rem;
+      background:
+        radial-gradient(1200px 300px at 50% -10%, color-mix(in srgb, var(--blue) 8%, transparent), transparent);
+    }
+    .anim-caption {
+      display: flex; align-items: center; gap: 0.5rem; min-height: 1.6rem;
+      font-size: 0.9rem; color: var(--body); margin-bottom: 0.6rem;
+    }
+    .anim-caption .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-bright); flex-shrink: 0; }
+    .anim-caption b { color: var(--blue); }
+
+    /* the question chip that drives the flow */
+    .q-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%;
+      background: color-mix(in srgb, var(--blue) 12%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--surface));
+      color: var(--ink); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.86rem;
+    }
+    .q-chip .q-ico { color: var(--blue); }
+
+    /* columns for the parallel stages */
+    .anim-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.8rem; }
+    @media (max-width: 680px) { .anim-cols { grid-template-columns: 1fr; } }
+    .anim-col { min-height: 210px; }
+    .col-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); margin-bottom: 0.5rem;
+    }
+    .col-head .badge { font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 999px;
+      background: var(--surface-soft); border: 1px solid var(--border); color: var(--body); font-variant-numeric: tabular-nums; }
+    .col-s1 .col-head { color: var(--blue); }
+    .col-s2 .col-head { color: var(--gold); }
+
+    /* a compact "table glyph": header bar + cells, so the corpus reads as TABLES */
+    .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
+    .tglyph {
+      border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface);
+      aspect-ratio: 4 / 3; display: flex; flex-direction: column; transition: opacity .4s, transform .4s, box-shadow .3s;
+    }
+    .tglyph .tg-head { height: 26%; background: var(--blue); position: relative; }
+    .tglyph .tg-head::before { content:''; position:absolute; left:0; top:0; width:22%; height:100%; background: var(--purple); }
+    .tglyph .tg-body { flex: 1; background:
+      repeating-linear-gradient(to bottom, var(--surface-soft), var(--surface-soft) 3px, transparent 3px, transparent 6px); }
+    .tglyph.dim { opacity: 0.12; }
+    .tglyph.keep { box-shadow: 0 0 0 2px var(--blue); }
+    .tglyph.keep2 { box-shadow: 0 0 0 2px var(--gold-bright); }
+    .tglyph.pop { transform: scale(1.06); }
+
+    /* a real mini-table built during the animation */
+    .anim-mini {
+      margin-top: 0.4rem; border: 1px solid var(--gold-bright); border-radius: 0.55rem; overflow: hidden;
+      box-shadow: 0 4px 16px var(--shadow); animation: mini-in .5s ease;
+    }
+    @keyframes mini-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .anim-mini .am-title { font-size: 0.8rem; font-weight: 700; color: var(--ink);
+      padding: 0.4rem 0.6rem; background: var(--surface-soft); border-bottom: 1px solid var(--border); }
+    .anim-mini table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .anim-mini th, .anim-mini td { border-bottom: 1px solid var(--border); padding: 0.28rem 0.5rem; text-align: left;
+      max-width: 160px; white-space: nowrap; }
+    .anim-mini th { background: color-mix(in srgb, var(--blue) 8%, var(--surface)); color: var(--body); font-weight: 600; }
+    .anim-mini td.trunc { cursor: help; } .anim-mini td.trunc span { border-bottom: 1px dotted var(--muted); }
+
+    /* final Stage-3 ranked list */
+    .anim-final { display: grid; gap: 0.4rem; }
+    .fin-row {
+      display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; border-radius: 0.5rem;
+      background: var(--surface); border: 1px solid var(--border); font-size: 0.86rem;
+      animation: fin-in .4s ease backwards;
+    }
+    .fin-row.gold { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright); }
+    .fin-row .fin-rank { font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; width: 1.4rem; }
+    .fin-row .fin-title { color: var(--ink); font-weight: 600; }
+    .fin-row .fin-star { color: var(--gold-bright); }
+    @keyframes fin-in { from { opacity: 0; transform: translateX(-8px); } }
+
+    /* progress + controls (revealed on hover / focus) */
+    .anim-ctl {
+      display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.2rem;
+      border-top: 1px solid var(--border); background: var(--surface-soft);
+    }
+    .anim-progress { flex: 1; height: 6px; border-radius: 999px; background: var(--border); position: relative; cursor: pointer; }
+    .anim-bar { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue), var(--gold-bright)); width: 0%; }
+    .cbtn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 0.45rem; cursor: pointer;
+      color: var(--ink); font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+      padding: 0.3rem 0.6rem; min-width: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+    }
+    .cbtn:hover { border-color: var(--blue); color: var(--blue); }
+    .anim-time { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 66px; text-align: right; }
+    .speed-btn { min-width: 2.6rem; }
 
     /* ─── Demo playground ────────────────────── */
     .play {
@@ -284,10 +389,16 @@
       font-variant-numeric: tabular-nums;
     }
     .rcard .tid { font-size: 0.74rem; color: var(--muted); margin: 0.15rem 0 0.5rem; }
-    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .mini-table th, .mini-table td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; table-layout: auto; }
+    .mini-table th, .mini-table td {
+      border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left;
+      max-width: 200px; white-space: nowrap;
+    }
     .mini-table th { background: var(--surface-soft); font-weight: 600; color: var(--body); }
     .mini-table td { color: var(--body); }
+    /* truncated cell: dotted underline hints a tooltip is available on hover */
+    .mini-table td.trunc { cursor: help; border-bottom: 1px solid var(--border); }
+    .mini-table td.trunc span { border-bottom: 1px dotted var(--muted); }
 
     /* ─── Terminal ───────────────────────────── */
     .term {
@@ -399,24 +510,24 @@
 </head>
 <body>
 
-<!-- ── Top bar with tabs + theme toggle ── -->
+<!-- ── Top bar: brand · segmented Demo/Paper toggle · links · theme ── -->
 <div class="topbar">
   <div class="topbar-inner">
     <span class="brand"><span class="c">CRAFT</span></span>
-    <div class="tabs" role="tablist">
-      <button class="tab-btn active" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo</button>
-      <button class="tab-btn" id="tab-paper" role="tab" aria-selected="false" aria-controls="panel-paper">Paper</button>
+    <div class="segmented" role="tablist" aria-label="View">
+      <button class="seg-btn active" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo</button>
+      <button class="seg-btn" id="tab-paper" role="tab" aria-selected="false" aria-controls="panel-paper">Paper</button>
     </div>
     <span class="topbar-spacer"></span>
     <a class="ghost" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub</a>
-    <a class="ghost" href="https://arxiv.org/abs/2505.14984" target="_blank">arXiv</a>
+    <a class="ghost" href="https://aclanthology.org/2026.acl-long.149/" target="_blank">Paper</a>
     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">◐</button>
   </div>
 </div>
 
 <!-- ── Hero ── -->
 <section class="hero">
-  <div class="venue">arXiv 2026 · ACL 2026</div>
+  <div class="venue">ACL 2026</div>
   <h1><span class="c">CRAFT</span>: Training-Free Cascaded Retrieval for Tabular QA</h1>
   <p class="tag">A modular, training-free pipeline for retrieving tables to answer questions</p>
   <p class="authors"><b>Adarsh Singh</b>, <b>Kushal Raj Bhandari</b>, Jianxi Gao, Soham Dan, Vivek Gupta</p>
@@ -426,9 +537,13 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Try the Demo
     </button>
-    <a class="btn btn-primary" href="https://arxiv.org/abs/2505.14984" target="_blank">
+    <a class="btn btn-primary" href="https://aclanthology.org/2026.acl-long.149/" target="_blank">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Paper
+      Paper (ACL)
+    </a>
+    <a class="btn btn-outline" href="https://arxiv.org/abs/2505.14984" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      arXiv
     </a>
     <a class="btn btn-outline" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.38 7.86 10.9.57.1.78-.25.78-.55v-1.92c-3.19.69-3.86-1.54-3.86-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.27-5.23-5.67 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.95 10.95 0 012.87-.39c.97.01 1.95.13 2.87.39 2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.41-2.69 5.38-5.25 5.66.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.79.55C20.21 21.38 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
@@ -440,6 +555,28 @@
 <main>
   <!-- ══════════ DEMO PANEL ══════════ -->
   <div class="panel active" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
+
+    <div class="eyebrow">How it works</div>
+    <h2 class="h-sec">The pipeline, step by step</h2>
+    <p class="lead">A question and a large collection of tables go in. CRAFT runs a sparse and a dense
+      retriever in parallel, builds a mini-table from the best rows, then reranks to a final shortlist.</p>
+
+    <div class="anim mt-lg" id="anim">
+      <div class="anim-stage">
+        <div class="anim-caption"><span class="step-dot"></span><span id="anim-cap">Loading…</span></div>
+        <div id="anim-body"></div>
+      </div>
+      <div class="anim-ctl">
+        <button class="cbtn" id="anim-play" aria-label="Play or pause">❚❚</button>
+        <button class="cbtn" id="anim-back" aria-label="Back 5 seconds">« 5s</button>
+        <button class="cbtn" id="anim-fwd" aria-label="Forward 5 seconds">5s »</button>
+        <div class="anim-progress" id="anim-track"><div class="anim-bar" id="anim-bar"></div></div>
+        <span class="anim-time" id="anim-time">0:00 / 0:00</span>
+        <button class="cbtn speed-btn" id="anim-speed" aria-label="Playback speed">1×</button>
+      </div>
+    </div>
+
+    <hr class="divider" />
 
     <div class="eyebrow">Explore results</div>
     <h2 class="h-sec">Browse what CRAFT retrieves</h2>
@@ -631,7 +768,8 @@ craft tui                                            <span class="cmt"># menu-dr
 
 <footer>
   <p>
-    <a href="https://arxiv.org/abs/2505.14984" target="_blank">arXiv:2505.14984</a> ·
+    <a href="https://aclanthology.org/2026.acl-long.149/" target="_blank">ACL Anthology</a> ·
+    <a href="https://arxiv.org/abs/2505.14984" target="_blank">arXiv</a> ·
     <a href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub</a> ·
     Coral Lab, ASU
   </p>
@@ -672,6 +810,15 @@ craft tui                                            <span class="cmt"># menu-dr
 
   /* ── Result browser: lazy-load a dataset's precomputed results and search them ── */
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  // Render a table cell, truncating long values and exposing the full text as a
+  // native hover tooltip (title attr). Used by the result cards and the animation.
+  const CELL_MAX = 25;
+  function cell(value) {
+    const v = String(value == null ? "" : value);
+    if (v.length <= CELL_MAX) return `<td>${esc(v)}</td>`;
+    return `<td class="trunc" title="${esc(v)}"><span>${esc(v.slice(0, CELL_MAX))}…</span></td>`;
+  }
 
   const state = {
     ds: "nq",
@@ -754,7 +901,7 @@ craft tui                                            <span class="cmt"># menu-dr
     let preview = "";
     if (state.showRows && (t.headers.length || t.rows.length)) {
       const head = t.headers.map(h=>`<th>${esc(h)}</th>`).join("");
-      const body = (t.rows||[]).slice(0,3).map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+      const body = (t.rows||[]).slice(0,3).map(r=>`<tr>${r.map(cell).join("")}</tr>`).join("");
       preview = `<table class="mini-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
     }
     return `<div class="rcard${isGold?' top':''}">
@@ -861,7 +1008,196 @@ craft tui                                            <span class="cmt"># menu-dr
     els.search.value = "brazos river"; renderSuggestions(matchQuestions("brazos river")); els.search.focus();
   });
 
-  loadDataset("nq");  // preload the default dataset
+  loadDataset("nq").then(startAnimation);  // preload default dataset, then animate
+
+  /* ── Pipeline animation (shares the demo's table styling) ──
+     A scene timeline drives an incremental story:
+       0 question + corpus of N tables
+       1 Stage 1 (sparse) and Stage 2 (dense) filter IN PARALLEL
+       2 mini-table built from the best rows
+       3 Stage 3 rerank -> final shortlist
+     The clock advances in ms; each scene renders from elapsed time so the
+     ±5s / speed controls work by simply moving or scaling the clock. */
+  const anim = {
+    t: 0, dur: 22000, playing: true, speed: 1, last: 0, raf: null,
+    scenes: [
+      { at: 0,     name: "input" },
+      { at: 4500,  name: "parallel" },
+      { at: 12000, name: "mini" },
+      { at: 16000, name: "final" },
+    ],
+    example: null,
+  };
+  const A = {
+    cap: document.getElementById("anim-cap"),
+    body: document.getElementById("anim-body"),
+    play: document.getElementById("anim-play"),
+    back: document.getElementById("anim-back"),
+    fwd: document.getElementById("anim-fwd"),
+    track: document.getElementById("anim-track"),
+    bar: document.getElementById("anim-bar"),
+    time: document.getElementById("anim-time"),
+    speed: document.getElementById("anim-speed"),
+  };
+
+  function pickExample() {
+    // Prefer the Brazos River query (a clean single-table answer); else the first.
+    if (!state.cache.nq) return null;
+    const qs = state.cache.nq.queries;
+    const ex = qs.find(q => /brazos river/i.test(q.question)) || qs[0];
+    return ex ? { data: state.cache.nq, q: ex } : null;
+  }
+
+  function fmt(ms) { const s = Math.max(0, Math.floor(ms/1000)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+
+  function glyphs(n, cls) {
+    let s = "";
+    for (let i = 0; i < n; i++) s += `<div class="tglyph ${cls(i)}"><div class="tg-head"></div><div class="tg-body"></div></div>`;
+    return s;
+  }
+
+  function miniTableHTML(ex) {
+    const t = ex.data.tables[ex.q.stages.stage3[0]] || { title: "", headers: [], rows: [] };
+    const ncol = Math.min(4, Math.max((t.headers||[]).length, ((t.rows||[])[0]||[]).length, 1));
+    const head = Array.from({length: ncol}, (_, i) => {
+      const h = (t.headers||[])[i];
+      return `<th>${esc(h && h.trim() ? h : "Col " + (i+1))}</th>`;
+    }).join("");
+    const rows = (t.rows||[]).slice(0,3).map(r=>`<tr>${r.slice(0,ncol).map(cell).join("")}</tr>`).join("");
+    return `<div class="anim-mini">
+      <div class="am-title">${esc(t.title||"mini-table")}</div>
+      <table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+
+  function finalHTML(ex, upto) {
+    const ids = ex.q.stages.stage3.slice(0, 5);
+    const gold = new Set(ex.q.gold_table_ids || []);
+    return `<div class="anim-final">` + ids.map((id, i) => {
+      if (i > upto) return "";
+      const t = ex.data.tables[id] || { title: id };
+      const isGold = gold.has(id);
+      return `<div class="fin-row ${isGold?'gold':''}" style="animation-delay:${i*0.08}s">
+        <span class="fin-rank">#${i+1}</span>
+        ${isGold?'<span class="fin-star">★</span>':''}
+        <span class="fin-title">${esc(t.title||id)}</span>
+      </div>`;
+    }).join("") + `</div>`;
+  }
+
+  let lastKey = "";
+  function renderAnim(force) {
+    // Progress + time update every frame; the heavier scene DOM only rebuilds
+    // when the scene (or its visible sub-step) actually changes.
+    A.bar.style.width = `${Math.min(100, (anim.t / anim.dur) * 100)}%`;
+    A.time.textContent = `${fmt(anim.t)} / ${fmt(anim.dur)}`;
+
+    const ex = anim.example;
+    if (!ex) { A.cap.textContent = "Example unavailable."; return; }
+    const t = anim.t;
+    const q = `<span class="q-chip"><span class="q-ico">?</span>${esc(ex.q.question)}</span>`;
+
+    // A key that changes only at meaningful visual steps (throttles re-render).
+    let key;
+    if (t < anim.scenes[1].at) key = "s0:" + Math.min(28, Math.floor((t/anim.scenes[1].at)*28)+4);
+    else if (t < anim.scenes[2].at) key = "s1:" + ((t-anim.scenes[1].at)/(anim.scenes[2].at-anim.scenes[1].at) > 0.35 ? "b" : "a");
+    else if (t < anim.scenes[3].at) key = "s2";
+    else key = "s3:" + Math.min(4, Math.floor(((t-anim.scenes[3].at)/(anim.dur-anim.scenes[3].at))*6));
+    if (!force && key === lastKey) return;
+    lastKey = key;
+
+    if (t < anim.scenes[1].at) {
+      // Scene 0: question + growing corpus of tables, a search shimmer.
+      const grown = Math.min(28, Math.floor((t / anim.scenes[1].at) * 28) + 4);
+      A.cap.innerHTML = `A question meets a corpus of <b>many tables</b>`;
+      A.body.innerHTML = `${q}
+        <div class="anim-cols"><div class="anim-col" style="grid-column:1 / -1">
+          <div class="col-head"><span>Table corpus</span><span class="badge">N tables</span></div>
+          <div class="tgrid">${glyphs(grown, () => "")}</div>
+        </div></div>`;
+    } else if (t < anim.scenes[2].at) {
+      // Scene 1: Stage 1 and Stage 2 filter in parallel.
+      const p = (t - anim.scenes[1].at) / (anim.scenes[2].at - anim.scenes[1].at);
+      A.cap.innerHTML = `<b>Stage 1</b> (sparse) and <b>Stage 2</b> (dense) narrow the corpus — in parallel`;
+      const keepN = 6, total = 24;
+      // Deterministic: as the scene progresses, all but the first keepN dim out.
+      const mk = (kcls) => glyphs(total, i => p > 0.35 ? (i < keepN ? kcls : "dim") : "");
+      A.body.innerHTML = `${q}
+        <div class="anim-cols">
+          <div class="anim-col col-s1">
+            <div class="col-head"><span>Stage 1 · SPLADE</span><span class="badge">5,000</span></div>
+            <div class="tgrid">${mk("keep")}</div>
+          </div>
+          <div class="anim-col col-s2">
+            <div class="col-head"><span>Stage 2 · Dense</span><span class="badge">100</span></div>
+            <div class="tgrid">${mk("keep2")}</div>
+          </div>
+        </div>`;
+    } else if (t < anim.scenes[3].at) {
+      // Scene 2: mini-table construction from the top candidate's best rows.
+      A.cap.innerHTML = `Build a <b>mini-table</b> from the most relevant rows`;
+      A.body.innerHTML = `${q}
+        <div class="anim-cols">
+          <div class="anim-col">
+            <div class="col-head"><span>Top candidate</span></div>
+            <div class="tgrid" style="grid-template-columns:repeat(3,1fr);max-width:180px">${glyphs(6, i => i===0?"keep2 pop":"dim")}</div>
+          </div>
+          <div class="anim-col">
+            <div class="col-head" style="color:var(--gold)"><span>Mini-table</span></div>
+            ${miniTableHTML(ex)}
+          </div>
+        </div>`;
+    } else {
+      // Scene 3: Stage 3 rerank -> final shortlist (revealed row by row).
+      const p = (t - anim.scenes[3].at) / (anim.dur - anim.scenes[3].at);
+      const upto = Math.min(4, Math.floor(p * 6));
+      A.cap.innerHTML = `<b>Stage 3</b> reranks to the final shortlist`;
+      A.body.innerHTML = `${q}
+        <div class="anim-cols"><div class="anim-col" style="grid-column:1 / -1">
+          <div class="col-head" style="color:var(--purple)"><span>Stage 3 · Final ranking</span><span class="badge">top-k</span></div>
+          ${finalHTML(ex, upto)}
+        </div></div>`;
+    }
+  }
+
+  function tick(now) {
+    if (!anim.last) anim.last = now;
+    const dt = (now - anim.last) * anim.speed;
+    anim.last = now;
+    if (anim.playing) {
+      anim.t += dt;
+      if (anim.t >= anim.dur) anim.t = 0;  // loop
+      renderAnim();
+    }
+    anim.raf = requestAnimationFrame(tick);
+  }
+
+  function setPlaying(on) { anim.playing = on; A.play.textContent = on ? "❚❚" : "▶"; anim.last = 0; }
+  function seek(ms) { anim.t = Math.max(0, Math.min(anim.dur, ms)); renderAnim(true); }
+
+  function startAnimation() {
+    anim.example = pickExample();
+    if (!anim.example) { A.cap.textContent = "Example unavailable."; return; }
+    A.play.addEventListener("click", () => setPlaying(!anim.playing));
+    A.back.addEventListener("click", () => seek(anim.t - 5000));
+    A.fwd.addEventListener("click", () => seek(anim.t + 5000));
+    A.speed.addEventListener("click", () => {
+      const speeds = [1, 1.5, 2, 0.5];
+      anim.speed = speeds[(speeds.indexOf(anim.speed) + 1) % speeds.length];
+      A.speed.textContent = `${anim.speed}×`;
+    });
+    A.track.addEventListener("click", (e) => {
+      const rect = A.track.getBoundingClientRect();
+      seek(((e.clientX - rect.left) / rect.width) * anim.dur);
+    });
+    // Respect reduced-motion: show the final state, don't auto-run.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      anim.t = anim.scenes[3].at + 1; setPlaying(false); renderAnim(true); return;
+    }
+    setPlaying(true);
+    renderAnim(true);
+    anim.raf = requestAnimationFrame(tick);
+  }
 
   /* ── craft tui terminal replay ── */
   const LINES = [
