@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" width="920" height="340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="CRAFT retrieval pipeline: a question and a corpus of tables pass through Stage 1 (SPLADE) and Stage 2 (dense) in parallel, then a mini-table is built and Stage 3 reranks to a final shortlist.">
+  <style>
+    :root { color-scheme: light dark; }
+    .bg      { fill: #f3f7fd; }
+    .card    { fill: #ffffff; stroke: #cfdcee; }
+    .ink     { fill: #16233a; }
+    .muted   { fill: #5a6b82; }
+    .blue    { fill: #2f6fd0; }
+    .gold    { fill: #eab308; }
+    .violet  { fill: #6d4bd6; }
+    .cellbg  { fill: #eaf2fc; }
+    .stroke-blue   { stroke: #2f6fd0; }
+    .stroke-gold   { stroke: #eab308; }
+    .stroke-violet { stroke: #6d4bd6; }
+    @media (prefers-color-scheme: dark) {
+      .bg     { fill: #0e141d; }
+      .card   { fill: #161e2a; stroke: #30405a; }
+      .ink    { fill: #e7eef8; }
+      .muted  { fill: #93a2b8; }
+      .cellbg { fill: #1a2536; }
+    }
+    text { font-size: 13px; }
+    .lbl   { font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+    .small { font-size: 10px; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="920" height="340" rx="14"/>
+
+  <!-- ── Question chip ─────────────────────────────────────────── -->
+  <g transform="translate(24,22)">
+    <rect class="card stroke-blue" x="0" y="0" width="300" height="34" rx="17" stroke-width="1.5"/>
+    <circle class="blue" cx="20" cy="17" r="7"/>
+    <text class="ink" x="34" y="21">where does the brazos river start and stop</text>
+  </g>
+
+  <!-- ── Stage titles ─────────────────────────────────────────── -->
+  <g transform="translate(24,74)">
+    <text class="lbl blue"   x="0"   y="0">STAGE 1 · SPLADE</text>
+    <text class="lbl gold"   x="250" y="0">STAGE 2 · DENSE</text>
+    <text class="lbl violet" x="640" y="0">STAGE 3 · RERANK</text>
+    <text class="small muted" x="140" y="0">(in parallel)</text>
+  </g>
+
+  <!-- ══ Stage 1 + Stage 2 run in parallel over the corpus ══ -->
+  <!-- Corpus grid: 5x4 table glyphs. Two overlaid copies (blue keep / gold keep)
+       animate to show each retriever narrowing the corpus at the same time. -->
+  <g transform="translate(24,90)">
+    <!-- Column 1: SPLADE -->
+    <g>
+      <!--
+        Each glyph: header bar + violet corner + striped body. The ones that are
+        "kept" stay bright; the rest fade. Timing loops every 9s.
+      -->
+      <!-- keepers (top-left cluster) stay bright -->
+      <g>
+        <g transform="translate(0,0)"   class="glyph">
+          <rect class="card stroke-blue" width="34" height="26" rx="3" stroke-width="1.6"/>
+          <rect class="blue" width="34" height="8" rx="3"/><rect class="violet" width="8" height="8" rx="2"/>
+        </g>
+        <g transform="translate(42,0)"  class="glyph">
+          <rect class="card stroke-blue" width="34" height="26" rx="3" stroke-width="1.6"/>
+          <rect class="blue" width="34" height="8" rx="3"/><rect class="violet" width="8" height="8" rx="2"/>
+        </g>
+        <g transform="translate(0,34)"  class="glyph">
+          <rect class="card stroke-blue" width="34" height="26" rx="3" stroke-width="1.6"/>
+          <rect class="blue" width="34" height="8" rx="3"/><rect class="violet" width="8" height="8" rx="2"/>
+        </g>
+      </g>
+      <!-- the rest fade out to show filtering -->
+      <g opacity="1">
+        <animate attributeName="opacity" values="1;1;0.12;0.12;1" keyTimes="0;0.25;0.45;0.85;1" dur="9s" repeatCount="indefinite"/>
+        <g transform="translate(84,0)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,0)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(42,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(84,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(0,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(42,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(84,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+      </g>
+      <text class="small muted" x="0" y="118">169K → 5,000</text>
+    </g>
+
+    <!-- Column 2: Dense (same corpus, different keepers → gold) -->
+    <g transform="translate(226,0)">
+      <g>
+        <g transform="translate(0,0)">
+          <rect class="card stroke-gold" width="34" height="26" rx="3" stroke-width="1.6"/>
+          <rect class="gold" width="34" height="8" rx="3"/><rect class="violet" width="8" height="8" rx="2"/>
+        </g>
+        <g transform="translate(42,34)">
+          <rect class="card stroke-gold" width="34" height="26" rx="3" stroke-width="1.6"/>
+          <rect class="gold" width="34" height="8" rx="3"/><rect class="violet" width="8" height="8" rx="2"/>
+        </g>
+      </g>
+      <g opacity="1">
+        <animate attributeName="opacity" values="1;1;0.12;0.12;1" keyTimes="0;0.25;0.45;0.85;1" dur="9s" begin="0.3s" repeatCount="indefinite"/>
+        <g transform="translate(42,0)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(84,0)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,0)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(0,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(84,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,34)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(0,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(42,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(84,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+        <g transform="translate(126,68)"><rect class="card" width="34" height="26" rx="3"/><rect class="cellbg" y="9" width="34" height="17"/></g>
+      </g>
+      <text class="small muted" x="0" y="118">5,000 → 100</text>
+    </g>
+  </g>
+
+  <!-- ── Arrow into mini-table + Stage 3 ─────────────────────── -->
+  <g transform="translate(486,150)">
+    <path class="stroke-gold" d="M0,0 H40" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.45;0.5;1" dur="9s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- ── Mini-table (built from best rows) ───────────────────── -->
+  <g transform="translate(536,96)" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;1" keyTimes="0;0.48;0.58;0.9;1" dur="9s" repeatCount="indefinite"/>
+    <rect class="card stroke-gold" width="88" height="96" rx="7" stroke-width="1.6"/>
+    <text class="small gold lbl" x="10" y="18">MINI-TABLE</text>
+    <rect class="blue"   x="8" y="26" width="72" height="12" rx="2"/>
+    <rect class="cellbg" x="8" y="42" width="72" height="10" rx="2"/>
+    <rect class="cellbg" x="8" y="56" width="72" height="10" rx="2"/>
+    <rect class="cellbg" x="8" y="70" width="72" height="10" rx="2"/>
+  </g>
+
+  <!-- ── Stage 3: final ranked shortlist ─────────────────────── -->
+  <g transform="translate(648,90)" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.62;0.72;1" dur="9s" repeatCount="indefinite"/>
+    <!-- #1 gold (the answer table) -->
+    <g transform="translate(0,0)">
+      <rect class="card stroke-gold" width="248" height="26" rx="6" stroke-width="1.6"/>
+      <text class="gold" x="12" y="18">★</text>
+      <text class="muted small" x="30" y="18">#1</text>
+      <text class="ink" x="52" y="18">Brazos River</text>
+    </g>
+    <g transform="translate(0,32)"><rect class="card" width="248" height="26" rx="6"/><text class="muted small" x="12" y="18">#2</text><text class="ink" x="34" y="18">Colorado River (Texas)</text></g>
+    <g transform="translate(0,64)"><rect class="card" width="248" height="26" rx="6"/><text class="muted small" x="12" y="18">#3</text><text class="ink" x="34" y="18">Guadalupe River (Texas)</text></g>
+    <g transform="translate(0,96)"><rect class="card" width="248" height="26" rx="6"/><text class="muted small" x="12" y="18">#4</text><text class="ink" x="34" y="18">Pecos River</text></g>
+    <text class="small muted" x="0" y="140">100 → top-k</text>
+  </g>
+
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#eab308"/>
+    </marker>
+  </defs>
+</svg>
