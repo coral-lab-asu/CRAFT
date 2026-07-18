@@ -1,6 +1,16 @@
 # ── Secrets ──────────────────────────────────────────────────────────────────
 .env
 
+# ── Poster/slide binaries (large; source generators are kept) ────────────────
+paper/*.pptx
+paper/*.drawio
+
+# ── Manim render outputs (code is kept; rendered video/frames are not) ───────
+media/videos/
+media/images/
+media/Tex/
+media/texts/
+
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]

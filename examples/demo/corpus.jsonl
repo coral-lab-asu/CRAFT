@@ -1,0 +1,4 @@
+{"table_id":"planets_0","title":"Planets of the Solar System","headers":["Planet","Moons","Diameter km"],"rows":[["Mercury","0","4879"],["Venus","0","12104"],["Saturn","146","116460"],["Jupiter","95","139820"]]}
+{"table_id":"rivers_0","title":"Longest Rivers","headers":["River","Length km","Continent"],"rows":[["Nile","6650","Africa"],["Amazon","6400","South America"],["Yangtze","6300","Asia"]]}
+{"table_id":"elements_0","title":"Chemical Elements","headers":["Element","Symbol","Atomic Number"],"rows":[["Hydrogen","H","1"],["Helium","He","2"],["Carbon","C","6"],["Oxygen","O","8"]]}
+{"table_id":"movies_0","title":"Highest Grossing Films","headers":["Film","Year","Box Office"],"rows":[["Avatar","2009","2.9B"],["Avengers Endgame","2019","2.8B"],["Titanic","1997","2.2B"]]}

@@ -1,34 +1,34 @@
-# CRAFT config template for a custom dataset
-# Copy this file, fill in the paths below, and run:
-#   python scripts/preprocess.py --config configs/my_dataset.yaml
-#   python scripts/retrieve.py   --config configs/my_dataset.yaml
+# CRAFT configuration template for your own dataset.
+# Copy this file, fill in the paths, then run:
+#   craft preprocess --config configs/my_dataset.yaml
+#   craft retrieve   --config configs/my_dataset.yaml
 
 data:
-  # Use "custom" to activate the generic JSONL loader.
-  dataset: custom
+  dataset: custom                # "custom" uses the generic JSONL loader
 
-  # --- Your corpus ---
-  # One JSON object per line.  Required keys:
-  #   "table_id"  : unique string
-  #   "title"     : table title (string)
-  #   "headers"   : list of column names
-  #   "rows"      : list of lists of cell strings
-  #   "description": optional LLM-generated summary (recommended for Stage 1)
-  corpus_file: /path/to/your/corpus.jsonl
+  # Corpus: one JSON object per line, with keys
+  #   table_id, title, headers, rows, and (optionally) description.
+  corpus_file: /path/to/corpus.jsonl
 
-  # --- Your queries ---
-  # One JSON object per line.  Required keys:
-  #   "qid"           : unique question ID
-  #   "question"      : question text
-  #   "gold_table_ids": list of correct table IDs (needed for eval)
-  # Optional keys:
-  #   "subquestion"   : decomposed question (helps Stage 1)
-  #   "answer"        : gold answer string
-  queries_file: /path/to/your/queries.jsonl
+  # Queries: one JSON object per line, with keys
+  #   qid, question, gold_table_ids, and (optionally) subquestion, answer.
+  queries_file: /path/to/queries.jsonl
 
-  output_dir: results/custom_pipeline
+  output_dir: results/custom
   corpus_fields: title+headers+description+cells
-  query_type: query+subquestion    # or just "query" if no subquestions
+  query_type: query+subquestion  # or just "query" if you have no sub-questions
+
+# Optional: generate table titles/descriptions (and query expansions) with a
+# small open-source model before indexing. Requires the [vllm] extra.
+generation:
+  enabled: false
+  backend: vllm                  # vllm | transformers | openai
+  model: Qwen/Qwen3-8B
+  enrich_tables: true
+  expand_queries: false
+  max_new_tokens: 512
+  batch_size: 64
+  sample_rows: 10
 
 stage1:
   model_id: naver/splade_v2_distil
@@ -37,24 +37,20 @@ stage1:
   batch_size: 128
 
 stage2:
-  # For a new domain, all-mpnet-base-v2 is a solid starting point.
-  # Switch to jinaai/jina-embeddings-v3 for multilingual or long tables.
   model_id: sentence-transformers/all-mpnet-base-v2
-  top_k_rows: 5
+  mode: representative_row       # representative_row (default) | mini_table
   top_k: 100
+  top_k_rows: 5
   batch_size: 256
-  mode: mini_table    # switch to "fast" for a quick first run
-  score_chunk_size: 64
 
 stage3:
-  # Set OPENAI_API_KEY in .env to auto-enable.
-  enabled: false
-  provider: openai    # "openai" or "gemini"
+  enabled: false                 # auto-enabled when an API key is present
+  provider: openai               # openai | gemini
   model_id: text-embedding-3-large
   top_k: 50
   api_batch: 100
   api_sleep: 0.5
 
-cuda_devices: "0"    # change to "0,1" for multi-GPU
+cuda_devices: "0"
 log_file: craft_custom.log
 eval_ks: [1, 10, 50, 100]

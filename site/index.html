@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRAFT: Training-Free Cascaded Retrieval for Tabular QA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Palette lifted from the CRAFT paper's pipeline figure:
+       table-header blue, database navy, star/cell gold, "+" gradient violet.
+       Tokens are theme-driven; light/dark defined once, toggle overrides both. */
+    :root {
+      --brand-blue: #2f7fe0; --brand-navy: #1e3a5f; --brand-gold: #eab308;
+      --brand-violet: #6d4bd6; --brand-teal: #2e9bb0;
+
+      --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
+      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --ink: #16233a;
+      --muted: #5a6b82; --body: #33445e;
+      --border: #cfdcee; --border-soft: #e2ecf8;
+      --page-bg: #f3f7fd; --surface: #ffffff; --surface-soft: #eaf2fc;
+      --hero-a: #e8f0fd; --hero-b: #eef6ff; --hero-c: #f4f8fe;
+      --code-bg: #16233a; --code-fg: #dbe6c9;
+      --shadow: rgba(23,45,80,0.10); --shadow-lg: rgba(23,45,80,0.16);
+      --max-w: 1080px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
+        --gold: #eec14a; --gold-bright: #f5c542;
+        --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
+        --border: #30405a; --border-soft: #263346;
+        --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
+        --hero-a: #111b2b; --hero-b: #0f1927; --hero-c: #0e141d;
+        --code-bg: #0b1220; --code-fg: #cfe1b4;
+        --shadow: rgba(0,0,0,0.32); --shadow-lg: rgba(0,0,0,0.45);
+      }
+    }
+    :root[data-theme="light"] {
+      --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
+      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --ink: #16233a; --muted: #5a6b82; --body: #33445e;
+      --border: #cfdcee; --border-soft: #e2ecf8;
+      --page-bg: #f3f7fd; --surface: #fff; --surface-soft: #eaf2fc;
+      --hero-a: #e8f0fd; --hero-b: #eef6ff; --hero-c: #f4f8fe;
+      --code-bg: #16233a; --code-fg: #dbe6c9;
+      --shadow: rgba(23,45,80,0.10); --shadow-lg: rgba(23,45,80,0.16);
+    }
+    :root[data-theme="dark"] {
+      --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
+      --gold: #eec14a; --gold-bright: #f5c542;
+      --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
+      --border: #30405a; --border-soft: #263346;
+      --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
+      --hero-a: #111b2b; --hero-b: #0f1927; --hero-c: #0e141d;
+      --code-bg: #0b1220; --code-fg: #cfe1b4;
+      --shadow: rgba(0,0,0,0.32); --shadow-lg: rgba(0,0,0,0.45);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif; color: var(--ink);
+      background: var(--page-bg); line-height: 1.6; font-size: 16px;
+    }
+    h1, h2, h3, h4 { font-family: 'Source Serif 4', serif; line-height: 1.2; text-wrap: balance; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular','Consolas',monospace; font-size: 0.9em;
+      background: var(--surface-soft); padding: 0.08em 0.35em; border-radius: 4px; }
+
+    /* ─── Top bar ─────────────────────────────── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: color-mix(in srgb, var(--page-bg) 86%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: var(--max-w); margin: 0 auto; padding: 0.6rem 1.2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .brand { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+    .brand .c { color: var(--blue); }
+    .tabs { display: flex; gap: 0.3rem; margin-left: 0.6rem; }
+    .tab-btn {
+      font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600;
+      color: var(--muted); background: none; border: none; cursor: pointer;
+      padding: 0.45rem 0.9rem; border-radius: 0.5rem;
+    }
+    .tab-btn:hover { color: var(--ink); background: var(--surface-soft); }
+    .tab-btn.active { color: var(--blue); background: var(--surface-soft); }
+    .topbar-spacer { flex: 1; }
+    .topbar a.ghost { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    .topbar a.ghost:hover { color: var(--blue); text-decoration: none; }
+    .theme-toggle {
+      background: var(--surface); border: 1px solid var(--border); cursor: pointer;
+      width: 34px; height: 34px; border-radius: 0.5rem; font-size: 1rem; color: var(--ink);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .theme-toggle:hover { border-color: var(--blue); }
+
+    /* ─── Hero (compact) ─────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, var(--hero-a) 0%, var(--hero-b) 55%, var(--hero-c) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.4rem 1.2rem 2rem; text-align: center;
+    }
+    .venue {
+      display: inline-block; background: var(--blue); color: #fff;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      border-radius: 999px; padding: 0.28rem 0.85rem; margin-bottom: 0.9rem;
+    }
+    .hero h1 { font-size: clamp(1.5rem, 3.6vw, 2.3rem); max-width: 780px; margin: 0 auto 0.5rem; }
+    .hero h1 .c { color: var(--blue); }
+    .hero .tag { color: var(--muted); font-family: 'Source Serif 4', serif; font-style: italic;
+      font-size: 1.02rem; max-width: 560px; margin: 0 auto 1rem; }
+    .authors { font-size: 0.9rem; color: var(--body); margin-bottom: 0.2rem; }
+    .authors b { color: var(--ink); }
+    .affil { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.1rem; }
+    .btn-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.5rem 1.1rem; border-radius: 0.5rem; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s ease; border: 2px solid transparent;
+    }
+    .btn svg { width: 15px; height: 15px; }
+    .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .btn-primary:hover { background: var(--blue-dk); border-color: var(--blue-dk); text-decoration: none; }
+    .btn-outline { background: var(--surface); color: var(--ink); border-color: var(--border); }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); text-decoration: none; }
+    .btn-gold { background: var(--gold-bright); color: #3a2c05; border-color: var(--gold-bright); }
+    .btn-gold:hover { filter: brightness(1.05); text-decoration: none; }
+
+    /* ─── Layout shell ───────────────────────── */
+    main { max-width: var(--max-w); margin: 0 auto; padding: 2rem 1.2rem 3rem; }
+    .panel { display: none; }
+    .panel.active { display: block; animation: fade 0.25s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .panel.active { animation: none; } }
+
+    .eyebrow { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--blue); margin-bottom: 0.35rem; }
+    .h-sec { font-size: 1.45rem; margin-bottom: 0.3rem; }
+    .lead { color: var(--body); font-size: 0.98rem; max-width: 62ch; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 2.4rem 0; }
+
+    /* ─── Demo playground ────────────────────── */
+    .play {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 1rem; box-shadow: 0 8px 30px var(--shadow);
+      overflow: hidden; margin-bottom: 1.4rem;
+    }
+    .play-head {
+      display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+      padding: 1rem 1.2rem; border-bottom: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+    .play-head .step-pill {
+      font-size: 0.72rem; font-weight: 700; color: var(--blue);
+      background: color-mix(in srgb, var(--blue) 14%, var(--surface));
+      padding: 0.2rem 0.55rem; border-radius: 999px;
+    }
+    .play-body { padding: 1.2rem; }
+    .ask-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+    .ask-row select {
+      flex: 1 1 340px; padding: 0.7rem 0.9rem; font-size: 0.95rem; border-radius: 0.55rem;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+      font-family: 'Inter', sans-serif;
+    }
+    .ask-row select:focus { outline: 2px solid var(--blue); border-color: transparent; }
+    .ask-row button {
+      padding: 0.7rem 1.3rem; font-size: 0.95rem; font-weight: 700; border-radius: 0.55rem;
+      background: var(--blue); color: #fff; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    .ask-row button:hover { background: var(--blue-dk); }
+    .flow {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+      font-size: 0.76rem; color: var(--muted); margin: 0.7rem 0 0.2rem;
+    }
+    .flow .chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.25rem 0.6rem; border-radius: 999px; font-weight: 600;
+      background: var(--surface-soft); border: 1px solid var(--border);
+    }
+    .flow .chip b { color: var(--blue); font-variant-numeric: tabular-nums; }
+    .flow .arrow { color: var(--gold-bright); font-weight: 800; }
+
+    /* dataset selector in the head */
+    .play-head select {
+      padding: 0.4rem 0.7rem; font-size: 0.88rem; border-radius: 0.5rem;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* search box + type-ahead suggestions */
+    .search-box { position: relative; }
+    .search-box input {
+      width: 100%; padding: 0.8rem 1rem; font-size: 1rem; border-radius: 0.6rem;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+      font-family: 'Inter', sans-serif;
+    }
+    .search-box input:focus { outline: 2px solid var(--blue); border-color: transparent; }
+    .suggestions {
+      position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+      list-style: none; margin: 0; padding: 0.3rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 0.6rem; box-shadow: 0 8px 24px var(--shadow-lg);
+      max-height: 300px; overflow-y: auto;
+    }
+    .suggestions li {
+      padding: 0.5rem 0.7rem; border-radius: 0.45rem; cursor: pointer; font-size: 0.9rem; color: var(--body);
+    }
+    .suggestions li:hover, .suggestions li.active { background: var(--surface-soft); color: var(--ink); }
+    .suggestions li .sg-id { font-size: 0.72rem; color: var(--muted); font-family: 'SFMono-Regular',monospace; }
+
+    .empty-state { text-align: center; color: var(--muted); padding: 1.6rem 1rem 0.6rem; font-size: 0.92rem; }
+    .es-hint { margin-top: 0.5rem; font-size: 0.85rem; }
+    .es-ex {
+      background: var(--surface-soft); border: 1px solid var(--border); border-radius: 999px;
+      padding: 0.2rem 0.7rem; cursor: pointer; color: var(--blue); font-family: inherit; font-size: 0.82rem;
+    }
+    .es-ex:hover { border-color: var(--blue); }
+
+    /* current question line */
+    .qline { margin: 1rem 0 0.4rem; font-size: 0.98rem; color: var(--ink); }
+    .qlabel { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--blue); margin-right: 0.4rem; }
+    .cur-qid { font-size: 0.74rem; color: var(--muted); font-family: 'SFMono-Regular',monospace; margin-left: 0.5rem; }
+
+    /* clickable stage flow */
+    .stageflow { display: flex; align-items: stretch; gap: 0.5rem; flex-wrap: wrap; margin: 0.9rem 0 0.2rem; }
+    .stage-node {
+      display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-start;
+      padding: 0.5rem 0.85rem; border-radius: 0.6rem; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border); font-family: 'Inter', sans-serif;
+      position: relative; overflow: hidden;
+    }
+    .stage-node::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; opacity: 0.5; }
+    .stage-node.s1::before { background: var(--blue); }
+    .stage-node.s2::before { background: var(--gold-bright); }
+    .stage-node.s3::before { background: var(--purple); }
+    .stage-node .sn-k { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .stage-node .sn-n { font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+    .stage-node.active { border-color: var(--blue); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent); }
+    .stage-node.s3.active { border-color: var(--purple); box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 25%, transparent); }
+    .sf-arrow { align-self: center; color: var(--gold-bright); font-weight: 800; }
+
+    /* result controls */
+    .result-controls { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 0.9rem 0 0.2rem; }
+    .ctl-label { font-size: 0.78rem; color: var(--muted); margin-right: 0.4rem; }
+    .ksel { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .kbtn {
+      min-width: 2rem; padding: 0.3rem 0.55rem; border-radius: 0.45rem; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border); color: var(--body);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+    }
+    .kbtn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .ctl-toggles { display: inline-flex; align-items: center; gap: 0.9rem; }
+    .tgl { font-size: 0.82rem; color: var(--body); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+    .dl-btn {
+      background: var(--surface-soft); border: 1px solid var(--border); border-radius: 0.5rem;
+      padding: 0.35rem 0.75rem; cursor: pointer; color: var(--blue); font-family: 'Inter', sans-serif;
+      font-size: 0.82rem; font-weight: 600;
+    }
+    .dl-btn:hover { border-color: var(--blue); }
+
+    .cards { margin-top: 1rem; display: grid; gap: 0.7rem; }
+    .rcard {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0.7rem; padding: 0.85rem 1rem; position: relative;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .rcard.top { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright), 0 2px 10px var(--shadow); }
+    .rcard-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+    .rcard-head h4 { font-family: 'Inter', sans-serif; font-size: 0.98rem; margin: 0; color: var(--ink); }
+    .rcard-meta { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+    .star { color: var(--gold-bright); }
+    .score {
+      background: color-mix(in srgb, var(--blue) 14%, var(--surface)); color: var(--blue);
+      border-radius: 5px; padding: 0.08rem 0.45rem; font-size: 0.76rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rcard .tid { font-size: 0.74rem; color: var(--muted); margin: 0.15rem 0 0.5rem; }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .mini-table th, .mini-table td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
+    .mini-table th { background: var(--surface-soft); font-weight: 600; color: var(--body); }
+    .mini-table td { color: var(--body); }
+
+    /* ─── Terminal ───────────────────────────── */
+    .term {
+      --tb: #1b2027; --tfg: #d7dde5; --tdim: #7d8795; --tgreen: #7ee787;
+      --tcyan: #79c0ff; --tblue: #6ea8fe; --tyellow: #e3b341; --tmag: #d2a8ff;
+      background: var(--tb); border: 1px solid #30363d; border-radius: 0.8rem;
+      overflow: hidden; box-shadow: 0 12px 36px var(--shadow-lg); margin-top: 0.4rem;
+    }
+    .term-bar { display: flex; align-items: center; gap: 0.5rem; background: #23293180;
+      padding: 0.6rem 0.9rem; border-bottom: 1px solid #30363d; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+    .term-title { margin-left: 0.4rem; font-size: 0.78rem; color: var(--tdim);
+      font-family: 'SFMono-Regular','Consolas',monospace; }
+    .term-body { font-family: 'SFMono-Regular','Consolas','Menlo',monospace;
+      font-size: 0.82rem; line-height: 1.65; color: var(--tfg);
+      padding: 1rem 1.2rem 1.3rem; white-space: pre; overflow-x: auto; min-height: 340px; }
+    .term-body .prompt { color: var(--tgreen); } .term-body .cmd { color: var(--tcyan); }
+    .term-body .cmt { color: var(--tdim); } .term-body .sel { color: var(--tmag); }
+    .term-body .ok { color: var(--tgreen); } .term-body .warn { color: var(--tyellow); }
+    .term-body .box { color: var(--tblue); } .term-body .score2 { color: var(--tyellow); }
+    .term-body .muted { color: var(--tdim); }
+    .cursor { display: inline-block; width: 0.55rem; height: 1.05em; background: var(--tfg);
+      vertical-align: text-bottom; animation: blink 1.05s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+    .replay { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.7rem;
+      font-size: 0.82rem; font-weight: 600; color: var(--blue); background: none; border: none;
+      cursor: pointer; font-family: 'Inter', sans-serif; padding: 0; }
+    .replay:hover { text-decoration: underline; }
+
+    /* ─── Stat tiles ─────────────────────────── */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; }
+    .tile {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0.7rem; padding: 1rem 1.1rem; box-shadow: 0 1px 3px var(--shadow);
+    }
+    .tile.gold { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright), 0 2px 10px var(--shadow); }
+    .tile .v { font-size: 1.7rem; font-weight: 800; color: var(--blue); line-height: 1;
+      font-variant-numeric: tabular-nums; font-family: 'Inter', sans-serif; }
+    .tile.gold .v { color: var(--gold); }
+    .tile .l { font-size: 0.76rem; color: var(--muted); margin-top: 0.35rem; }
+
+    /* ─── Feature / step cards ───────────────── */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+    @media (max-width: 720px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+    .fcard {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0.7rem; padding: 1.1rem 1.15rem; position: relative; overflow: hidden;
+    }
+    .fcard::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--blue); }
+    .fcard.s2::before { background: var(--gold-bright); }
+    .fcard.s3::before { background: var(--purple); }
+    .fcard .k { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+    .fcard.s2 .k { color: var(--gold); } .fcard.s3 .k { color: var(--purple); }
+    .fcard h4 { font-family: 'Inter', sans-serif; font-size: 1rem; margin: 0.25rem 0 0.4rem; color: var(--ink); }
+    .fcard p { font-size: 0.85rem; color: var(--body); line-height: 1.5; }
+    .fcard .ico { font-size: 1.4rem; margin-bottom: 0.3rem; }
+
+    /* ─── Pipeline figure ────────────────────── */
+    .fig { display: block; width: 100%; max-width: 820px; margin: 1.2rem auto; border-radius: 0.75rem;
+      box-shadow: 0 4px 22px var(--shadow); border: 1px solid var(--border); }
+    .fig.wide { max-width: 100%; }
+    .cap { text-align: center; font-size: 0.82rem; color: var(--muted); font-style: italic; margin-top: 0.5rem; }
+
+    /* ─── Results table ──────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 1.1rem 0; }
+    .rtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .rtable th { background: var(--surface-soft); padding: 0.6rem 0.9rem; text-align: left;
+      font-weight: 700; color: var(--body); border-bottom: 2px solid var(--border); }
+    .rtable td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); color: var(--body);
+      font-variant-numeric: tabular-nums; }
+    .rtable tr:last-child td { border-bottom: none; }
+    .rtable tr.best td { background: color-mix(in srgb, var(--gold-bright) 13%, var(--surface));
+      font-weight: 600; box-shadow: inset 3px 0 0 var(--gold-bright); }
+    .rtable tr.best td:first-child { color: var(--blue); }
+    .rtable .none { color: var(--gold); font-weight: 700; }
+    .cap-t { font-size: 0.8rem; color: var(--muted); font-style: italic; text-align: center; }
+
+    /* ─── Abstract / prose ───────────────────── */
+    .abstract {
+      font-family: 'Source Serif 4', serif; font-size: 1rem; line-height: 1.75; color: var(--body);
+      border-left: 4px solid var(--gold-bright); padding-left: 1.3rem; max-width: 68ch;
+    }
+    .abstract strong { color: var(--blue); }
+
+    /* ─── Code block ─────────────────────────── */
+    .code {
+      background: var(--code-bg); color: var(--code-fg);
+      font-family: 'SFMono-Regular','Consolas',monospace; font-size: 0.82rem; line-height: 1.7;
+      border-radius: 0.7rem; padding: 1.1rem 1.3rem; overflow-x: auto; margin-top: 0.8rem;
+    }
+    .code .cmt { color: #93a2b8; }
+    .bib { position: relative; }
+    .copy { position: absolute; top: 0.7rem; right: 0.8rem; background: rgba(255,255,255,0.1);
+      color: #d1d5db; border: 1px solid rgba(255,255,255,0.16); border-radius: 0.35rem;
+      font-size: 0.74rem; padding: 0.22rem 0.65rem; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .copy:hover { background: rgba(255,255,255,0.2); }
+
+    /* ─── Footer ─────────────────────────────── */
+    footer { border-top: 1px solid var(--border); text-align: center;
+      padding: 2rem 1.2rem; font-size: 0.82rem; color: var(--muted); }
+    footer a { color: var(--muted); } footer a:hover { color: var(--blue); }
+
+    .stack { display: grid; gap: 1rem; }
+    .mt-lg { margin-top: 2rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar with tabs + theme toggle ── -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="brand"><span class="c">CRAFT</span></span>
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo</button>
+      <button class="tab-btn" id="tab-paper" role="tab" aria-selected="false" aria-controls="panel-paper">Paper</button>
+    </div>
+    <span class="topbar-spacer"></span>
+    <a class="ghost" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub</a>
+    <a class="ghost" href="https://arxiv.org/abs/2505.14984" target="_blank">arXiv</a>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">◐</button>
+  </div>
+</div>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="venue">arXiv 2026 · ACL 2026</div>
+  <h1><span class="c">CRAFT</span>: Training-Free Cascaded Retrieval for Tabular QA</h1>
+  <p class="tag">A modular, training-free pipeline for retrieving tables to answer questions</p>
+  <p class="authors"><b>Adarsh Singh</b>, <b>Kushal Raj Bhandari</b>, Jianxi Gao, Soham Dan, Vivek Gupta</p>
+  <p class="affil">Arizona State University · Rensselaer Polytechnic Institute · Microsoft</p>
+  <div class="btn-row">
+    <button class="btn btn-gold" id="hero-try">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Try the Demo
+    </button>
+    <a class="btn btn-primary" href="https://arxiv.org/abs/2505.14984" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Paper
+    </a>
+    <a class="btn btn-outline" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.38 7.86 10.9.57.1.78-.25.78-.55v-1.92c-3.19.69-3.86-1.54-3.86-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.27-5.23-5.67 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.95 10.95 0 012.87-.39c.97.01 1.95.13 2.87.39 2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.41-2.69 5.38-5.25 5.66.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.79.55C20.21 21.38 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+      Code
+    </a>
+  </div>
+</section>
+
+<main>
+  <!-- ══════════ DEMO PANEL ══════════ -->
+  <div class="panel active" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
+
+    <div class="eyebrow">Explore results</div>
+    <h2 class="h-sec">Browse what CRAFT retrieves</h2>
+    <p class="lead">Search a benchmark question and see the tables CRAFT returns. The final ranking comes from
+      Stage&nbsp;3; open Stage&nbsp;1 or Stage&nbsp;2 to see how the shortlist was narrowed along the way.</p>
+
+    <div class="play mt-lg">
+      <div class="play-head">
+        <label for="dataset" style="font-size:0.82rem;color:var(--muted);font-weight:600;">Dataset</label>
+        <select id="dataset" aria-label="Dataset">
+          <option value="nq">NQ-Tables</option>
+          <option value="ottqa">OTT-QA</option>
+        </select>
+        <span id="ds-status" style="font-size:0.8rem;color:var(--muted);"></span>
+      </div>
+      <div class="play-body">
+        <div class="search-box">
+          <input type="text" id="qsearch" placeholder="Search a question, or paste a question id…" autocomplete="off" />
+          <ul id="suggestions" class="suggestions" hidden></ul>
+        </div>
+
+        <div id="result-area" hidden>
+          <div class="qline"><span class="qlabel">Question</span> <span id="cur-question"></span>
+            <span id="cur-qid" class="cur-qid"></span></div>
+
+          <!-- Clickable stage flow: Stage 3 is the default open panel. -->
+          <div class="stageflow" role="tablist">
+            <button class="stage-node s1" data-stage="stage1"><span class="sn-k">Stage 1</span><span class="sn-n">SPLADE</span></button>
+            <span class="sf-arrow">→</span>
+            <button class="stage-node s2" data-stage="stage2"><span class="sn-k">Stage 2</span><span class="sn-n">Dense</span></button>
+            <span class="sf-arrow">→</span>
+            <button class="stage-node s3 active" data-stage="stage3"><span class="sn-k">Stage 3</span><span class="sn-n">Final ranking</span></button>
+          </div>
+
+          <div class="result-controls">
+            <div class="ksel" id="krow">
+              <span class="ctl-label">Show top</span>
+              <button class="kbtn" data-k="1">1</button>
+              <button class="kbtn active" data-k="5">5</button>
+              <button class="kbtn" data-k="3">3</button>
+              <button class="kbtn" data-k="10">10</button>
+              <button class="kbtn" data-k="0">All</button>
+            </div>
+            <div class="ctl-toggles">
+              <label class="tgl"><input type="checkbox" id="show-rows" /> Headers &amp; rows</label>
+              <button class="dl-btn" id="download" type="button">↓ Download JSON</button>
+            </div>
+          </div>
+
+          <div class="cards" id="results"></div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <p>Start typing a question above to see CRAFT's retrieved tables.</p>
+          <p class="es-hint">Try: <button class="es-ex" type="button">where does the brazos river start and stop</button></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="eyebrow mt-lg">Terminal App</div>
+    <h2 class="h-sec">Or drive it from your terminal — <code>craft tui</code></h2>
+    <p class="lead">Menu-driven and fully interactive: choose a config, a pipeline scope, and a question,
+      then browse ranked tables. The full ranking is written to a readable results file as you go.</p>
+
+    <div class="term mt-lg" aria-label="craft tui terminal session">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-title">craft tui — interactive retrieval</span>
+      </div>
+      <div class="term-body" id="term"></div>
+    </div>
+    <button class="replay" id="replay" type="button">↻ Replay</button>
+
+    <hr class="divider" />
+
+    <div class="eyebrow">Run it yourself</div>
+    <h2 class="h-sec">Install &amp; launch in four commands</h2>
+    <pre class="code"><span class="cmt"># extras: [serve] web UI · [tui] terminal app · [openai] Stage 3</span>
+pip install "craft-tabqa[serve,tui]"
+
+<span class="cmt"># build the index + row embeddings for your corpus (once)</span>
+craft preprocess --config configs/my_dataset.yaml
+
+<span class="cmt"># retrieve the most relevant tables for each query</span>
+craft retrieve   --config configs/my_dataset.yaml
+
+<span class="cmt"># explore interactively</span>
+craft serve      --config configs/my_dataset.yaml   <span class="cmt"># web UI at http://localhost:8000</span>
+craft tui                                            <span class="cmt"># menu-driven terminal app</span></pre>
+    <p class="lead" style="margin-top:0.8rem;">Custom-dataset format and full docs are in the
+      <a href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub repository</a>.</p>
+  </div>
+
+  <!-- ══════════ PAPER PANEL ══════════ -->
+  <div class="panel" id="panel-paper" role="tabpanel" aria-labelledby="tab-paper">
+
+    <!-- What is CRAFT -->
+    <div class="eyebrow">Overview</div>
+    <h2 class="h-sec">What CRAFT is</h2>
+    <p class="abstract mt-lg">
+      <strong>CRAFT</strong> finds the tables that answer a question. Given a large collection of tables
+      and a natural-language question, it returns a short, ranked list of the most relevant tables —
+      which you can then read, or hand to a language model to produce an answer.
+      It is <strong>training-free</strong>: it composes off-the-shelf models into a pipeline, so there is
+      no fine-tuning to run and nothing dataset-specific to label. That makes it straightforward to point
+      at a new table collection of your own.
+    </p>
+
+    <hr class="divider" />
+
+    <!-- Pipeline as visual stepper -->
+    <div class="eyebrow">The pipeline</div>
+    <h2 class="h-sec">Three progressively precise stages</h2>
+    <div class="grid-3 mt-lg">
+      <div class="fcard">
+        <div class="k">Stage 1 · Sparse</div>
+        <h4>SPLADE</h4>
+        <p>Lexical retrieval over enriched table text narrows the full corpus to the top <b>5,000</b> candidates.</p>
+      </div>
+      <div class="fcard s2">
+        <div class="k">Stage 2 · Dense</div>
+        <h4>Sentence Transformer</h4>
+        <p>Row-level dense reranking scores candidates against the query, keeping the top <b>100</b>.</p>
+      </div>
+      <div class="fcard s3">
+        <div class="k">Stage 3 · Rerank</div>
+        <h4>Final reranking</h4>
+        <p>A reranker or embedding model — open-source or API — orders the shortlist into the final
+          top-<em>k</em>. This stage is swappable, so you can pick the model that fits your setup.</p>
+      </div>
+    </div>
+
+    <div class="grid-3 mt-lg">
+      <div class="fcard"><div class="ico">🔍</div><h4>Query expansion</h4><p>An LLM generates sub-questions that broaden lexical coverage of each query.</p></div>
+      <div class="fcard"><div class="ico">📋</div><h4>Table enrichment</h4><p>Each table gets an LLM title + summary, bridging the lexical gap with natural-language queries.</p></div>
+      <div class="fcard"><div class="ico">✂️</div><h4>Mini-tables</h4><p>Top query-relevant rows form a compact mini-table, cutting context up to 5&times;.</p></div>
+    </div>
+
+    <img src="static/images/craft_overview.png" alt="CRAFT pipeline overview" class="fig wide mt-lg" />
+    <p class="cap">Figure 1: The CRAFT framework — preprocessing, three-stage retrieval, and answer generation.</p>
+
+    <hr class="divider" />
+
+    <!-- Datasets (facts, no claims) -->
+    <div class="eyebrow">Benchmarks</div>
+    <h2 class="h-sec">Datasets it comes configured for</h2>
+    <p class="lead">CRAFT ships with configs for two open-domain table-QA benchmarks. You can also point it at
+      your own table collection.</p>
+    <div class="grid-2 mt-lg">
+      <div class="fcard">
+        <div class="k">Single-hop</div><h4>NQ-Tables</h4>
+        <p>Wikipedia tables where each question is answered by a single table.</p>
+      </div>
+      <div class="fcard s3">
+        <div class="k">Multi-hop</div><h4>OTT-QA</h4>
+        <p>Questions that reason across tables and passages.</p>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Why mini-tables (the idea, not the numbers) -->
+    <div class="eyebrow">Answering the question</div>
+    <h2 class="h-sec">Compact tables, smaller context</h2>
+    <p class="lead">Once the top tables are retrieved, CRAFT can pass them to a language model to produce
+      an answer. It sends <strong>mini-tables</strong> — each table's most relevant rows and its headers —
+      rather than whole tables, so the context stays small enough for lightweight models to read.</p>
+
+    <hr class="divider" />
+
+    <!-- BibTeX -->
+    <div class="eyebrow">Cite</div>
+    <h2 class="h-sec">BibTeX</h2>
+    <div class="bib mt-lg">
+      <pre class="code" id="bib">@misc{singh2025crafttrainingfreecascadedretrieval,
+      title={CRAFT: Training-Free Cascaded Retrieval for Tabular QA},
+      author={Adarsh Singh and Kushal Raj Bhandari and Jianxi Gao
+              and Soham Dan and Vivek Gupta},
+      year={2025},
+      eprint={2505.14984},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2505.14984},
+}</pre>
+      <button class="copy" onclick="copyBib()">Copy</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>
+    <a href="https://arxiv.org/abs/2505.14984" target="_blank">arXiv:2505.14984</a> ·
+    <a href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub</a> ·
+    Coral Lab, ASU
+  </p>
+  <p style="margin-top:0.4rem;">Website by Adarsh Singh.</p>
+</footer>
+
+<script>
+  /* ── Theme toggle (persisted; falls back to OS preference) ── */
+  const root = document.documentElement;
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const savedTheme = localStorage.getItem("craft-theme");
+  if (savedTheme) root.setAttribute("data-theme", savedTheme);
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const current = root.getAttribute("data-theme") || (prefersDark ? "dark" : "light");
+    const next = current === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    localStorage.setItem("craft-theme", next);
+  });
+
+  /* ── Tabs ── */
+  const tabs = { demo: document.getElementById("tab-demo"), paper: document.getElementById("tab-paper") };
+  const panels = { demo: document.getElementById("panel-demo"), paper: document.getElementById("panel-paper") };
+  function showTab(name) {
+    Object.keys(tabs).forEach(k => {
+      const on = k === name;
+      tabs[k].classList.toggle("active", on);
+      tabs[k].setAttribute("aria-selected", on ? "true" : "false");
+      panels[k].classList.toggle("active", on);
+    });
+    if (name === "demo") { playTerm(); }
+  }
+  tabs.demo.addEventListener("click", () => showTab("demo"));
+  tabs.paper.addEventListener("click", () => showTab("paper"));
+  document.getElementById("hero-try").addEventListener("click", () => {
+    showTab("demo");
+    document.querySelector(".play").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  /* ── Result browser: lazy-load a dataset's precomputed results and search them ── */
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  const state = {
+    ds: "nq",
+    data: null,          // { tables:{id:{title,headers,rows}}, queries:[...] }
+    cache: {},           // dataset -> data
+    query: null,         // currently selected query object
+    stage: "stage3",     // active stage
+    k: 5,                // top-k to show
+    showRows: false,
+  };
+  const els = {
+    dataset: document.getElementById("dataset"),
+    dsStatus: document.getElementById("ds-status"),
+    search: document.getElementById("qsearch"),
+    suggestions: document.getElementById("suggestions"),
+    resultArea: document.getElementById("result-area"),
+    emptyState: document.getElementById("empty-state"),
+    curQuestion: document.getElementById("cur-question"),
+    curQid: document.getElementById("cur-qid"),
+    results: document.getElementById("results"),
+  };
+
+  async function loadDataset(ds) {
+    if (state.cache[ds]) { state.data = state.cache[ds]; return; }
+    els.dsStatus.textContent = "loading…";
+    try {
+      const resp = await fetch(`data/${ds}.json`);
+      if (!resp.ok) throw new Error(resp.status);
+      const data = await resp.json();
+      state.cache[ds] = data; state.data = data;
+      els.dsStatus.textContent = `${data.num_queries.toLocaleString()} queries`;
+    } catch (e) {
+      els.dsStatus.textContent = "data unavailable";
+      state.data = null;
+    }
+  }
+
+  function matchQuestions(text) {
+    if (!state.data) return [];
+    const q = text.trim().toLowerCase();
+    if (!q) return [];
+    // Exact question-id lookup takes priority.
+    const byId = state.data.queries.filter(x => x.qid.toLowerCase() === q);
+    if (byId.length) return byId.slice(0, 8);
+    const words = q.split(/\s+/).filter(Boolean);
+    const scored = [];
+    for (const item of state.data.queries) {
+      const ql = item.question.toLowerCase();
+      let s = ql.startsWith(q) ? 100 : 0;
+      for (const w of words) if (ql.includes(w)) s += 1;
+      if (item.qid.toLowerCase().includes(q)) s += 50;
+      if (s > 0) scored.push([s, item]);
+    }
+    scored.sort((a,b) => b[0]-a[0]);
+    return scored.slice(0, 8).map(x => x[1]);
+  }
+
+  function renderSuggestions(list) {
+    if (!list.length) { els.suggestions.hidden = true; return; }
+    els.suggestions.innerHTML = list.map((it, i) =>
+      `<li data-qid="${esc(it.qid)}" class="${i===0?'active':''}">
+        ${esc(it.question)} <span class="sg-id">${esc(it.qid)}</span>
+      </li>`).join("");
+    els.suggestions.hidden = false;
+  }
+
+  function selectQuery(item) {
+    state.query = item;
+    els.search.value = item.question;
+    els.suggestions.hidden = true;
+    els.emptyState.hidden = true;
+    els.resultArea.hidden = false;
+    els.curQuestion.textContent = item.question;
+    els.curQid.textContent = item.qid;
+    renderResults();
+  }
+
+  function tableCard(tableId, rank, isGold) {
+    const t = (state.data.tables || {})[tableId] || { title: tableId, headers: [], rows: [] };
+    let preview = "";
+    if (state.showRows && (t.headers.length || t.rows.length)) {
+      const head = t.headers.map(h=>`<th>${esc(h)}</th>`).join("");
+      const body = (t.rows||[]).slice(0,3).map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+      preview = `<table class="mini-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+    return `<div class="rcard${isGold?' top':''}">
+      <div class="rcard-head">
+        <h4>${isGold?'<span class="star">★</span> ':''}${esc(t.title)}</h4>
+        <span class="rcard-meta">#${rank}</span>
+      </div>
+      <div class="tid">${esc(tableId)}</div>
+      ${preview}
+    </div>`;
+  }
+
+  function renderResults() {
+    if (!state.query) return;
+    const ids = (state.query.stages[state.stage] || []);
+    const gold = new Set(state.query.gold_table_ids || []);
+    const shown = state.k === 0 ? ids : ids.slice(0, state.k);
+    if (!shown.length) {
+      els.results.innerHTML = `<p class="empty-state">No tables recorded for this stage.</p>`;
+      return;
+    }
+    els.results.innerHTML = shown.map((id, i) => tableCard(id, i+1, gold.has(id))).join("");
+  }
+
+  /* search interactions */
+  els.search.addEventListener("input", () => renderSuggestions(matchQuestions(els.search.value)));
+  els.search.addEventListener("focus", () => { if (els.search.value) renderSuggestions(matchQuestions(els.search.value)); });
+  els.suggestions.addEventListener("click", (e) => {
+    const li = e.target.closest("li"); if (!li) return;
+    const item = state.data.queries.find(x => x.qid === li.dataset.qid);
+    if (item) selectQuery(item);
+  });
+  els.search.addEventListener("keydown", (e) => {
+    const items = [...els.suggestions.querySelectorAll("li")];
+    if (!items.length) return;
+    let idx = items.findIndex(li => li.classList.contains("active"));
+    if (e.key === "ArrowDown") { e.preventDefault(); idx = Math.min(idx+1, items.length-1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); idx = Math.max(idx-1, 0); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      const li = items[Math.max(idx,0)];
+      const item = state.data.queries.find(x => x.qid === li.dataset.qid);
+      if (item) selectQuery(item);
+      return;
+    } else return;
+    items.forEach(li => li.classList.remove("active"));
+    items[idx].classList.add("active");
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".search-box")) els.suggestions.hidden = true;
+  });
+
+  /* stage flow */
+  document.querySelectorAll(".stage-node").forEach(node => {
+    node.addEventListener("click", () => {
+      document.querySelectorAll(".stage-node").forEach(n => n.classList.remove("active"));
+      node.classList.add("active");
+      state.stage = node.dataset.stage;
+      renderResults();
+    });
+  });
+
+  /* k selector */
+  document.querySelectorAll(".kbtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".kbtn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.k = parseInt(btn.dataset.k, 10);
+      renderResults();
+    });
+  });
+
+  /* rows toggle */
+  document.getElementById("show-rows").addEventListener("change", (e) => {
+    state.showRows = e.target.checked; renderResults();
+  });
+
+  /* download current query's full result */
+  document.getElementById("download").addEventListener("click", () => {
+    if (!state.query) return;
+    const out = {
+      dataset: state.ds, qid: state.query.qid, question: state.query.question,
+      gold_table_ids: state.query.gold_table_ids,
+      stages: Object.fromEntries(Object.entries(state.query.stages).map(([s, ids]) =>
+        [s, ids.map(id => ({ table_id: id, ...(state.data.tables[id] || {}) }))])),
+    };
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${state.ds}_${state.query.qid}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  /* dataset switch */
+  els.dataset.addEventListener("change", async () => {
+    state.ds = els.dataset.value;
+    els.resultArea.hidden = true; els.emptyState.hidden = false;
+    els.search.value = ""; state.query = null;
+    await loadDataset(state.ds);
+  });
+
+  /* example shortcut */
+  document.querySelector(".es-ex").addEventListener("click", () => {
+    els.search.value = "brazos river"; renderSuggestions(matchQuestions("brazos river")); els.search.focus();
+  });
+
+  loadDataset("nq");  // preload the default dataset
+
+  /* ── craft tui terminal replay ── */
+  const LINES = [
+    {t:'<span class="prompt">$</span> <span class="cmd">craft tui</span>', d:500},
+    {t:'', d:120},
+    {t:'<span class="box">──────────</span> CRAFT · interactive retrieval <span class="box">──────────</span>', d:400},
+    {t:'', d:120},
+    {t:'<span class="warn">?</span> Choose a dataset config:  <span class="sel">configs/demo.yaml</span>', d:520},
+    {t:'<span class="warn">?</span> Pipeline scope:  <span class="sel">Stages 1+2  (local, no API cost)</span>', d:520},
+    {t:'<span class="warn">?</span> Choose a question:  <span class="sel">Which planet has the most moons?</span>', d:640},
+    {t:'', d:150},
+    {t:'<span class="prompt">Q:</span> Which planet has the most moons?', d:340},
+    {t:'<span class="muted">  Stage 1 SPLADE</span> <span class="ok">████████████</span> <span class="muted">done</span>   <span class="muted">Stage 2 Dense</span> <span class="ok">████████████</span> <span class="muted">done</span>', d:520},
+    {t:'', d:120},
+    {t:'<span class="box">┏━━━ #1  Planets of the Solar System</span>   score <span class="score2">0.627</span> <span class="box">━━━┓</span>', d:250},
+    {t:'<span class="box">┃</span> Planet   <span class="box">│</span> Moons <span class="box">│</span> Diameter km <span class="box">┃</span>', d:110},
+    {t:'<span class="box">┃</span> Mercury  <span class="box">│</span> 0     <span class="box">│</span> 4879        <span class="box">┃</span>', d:85},
+    {t:'<span class="box">┃</span> Saturn   <span class="box">│</span> 146   <span class="box">│</span> 116460      <span class="box">┃</span>', d:85},
+    {t:'<span class="box">┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</span>', d:250},
+    {t:'<span class="muted">  #2  Longest Rivers        score <span class="score2">0.247</span></span>', d:150},
+    {t:'<span class="muted">  #3  Chemical Elements     score <span class="score2">0.187</span></span>', d:250},
+    {t:'', d:150},
+    {t:'<span class="ok">✓</span> Full ranking appended to <span class="muted">results/demo/tui_results.txt</span>', d:400},
+  ];
+  const termEl = document.getElementById("term");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let timers = [];
+  function playTerm() {
+    timers.forEach(clearTimeout); timers = [];
+    if (reduceMotion) { termEl.innerHTML = LINES.map(l=>l.t).join("\n"); return; }
+    let html = "", delay = 200;
+    LINES.forEach((line, i) => {
+      delay += line.d;
+      timers.push(setTimeout(() => {
+        html += (i ? "\n" : "") + line.t;
+        termEl.innerHTML = html + (i < LINES.length-1 ? '<span class="cursor"></span>' : "");
+      }, delay));
+    });
+  }
+  document.getElementById("replay").addEventListener("click", playTerm);
+  playTerm();  // demo tab is default-visible
+
+  /* ── BibTeX copy ── */
+  function copyBib() {
+    navigator.clipboard.writeText(document.getElementById("bib").textContent).then(() => {
+      const b = document.querySelector(".copy"); b.textContent = "Copied!";
+      setTimeout(() => b.textContent = "Copy", 2000);
+    });
+  }
+  window.copyBib = copyBib;
+</script>
+
+</body>
+</html>
