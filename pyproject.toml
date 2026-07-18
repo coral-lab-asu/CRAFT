@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "craft-tabqa"
+version = "1.0.0"
+description = "CRAFT: Training-Free Cascaded Retrieval for Tabular QA"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Adarsh Singh" },
+    { name = "Kushal Raj Bhandari" },
+    { name = "Jianxi Gao" },
+    { name = "Soham Dan" },
+    { name = "Vivek Gupta" },
+]
+keywords = ["table retrieval", "question answering", "SPLADE", "dense retrieval", "information retrieval"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.21",
+    "torch>=1.9",
+    "transformers>=4.21",
+    "sentence-transformers>=2.2",
+    "tqdm>=4.62",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# LLM enrichment backends (Stage 0 preprocessing)
+vllm = ["vllm>=0.4"]
+# Stage 3 embedding-API providers
+openai = ["openai>=1.0"]
+gemini = ["google-genai>=0.3"]
+# Web serving
+serve = ["fastapi>=0.110", "uvicorn>=0.27", "pydantic>=2.0"]
+# Interactive terminal app (craft tui)
+tui = ["questionary>=2.0", "rich>=13.0"]
+# Everything for local development
+dev = ["pytest>=7.0"]
+all = [
+    "openai>=1.0",
+    "google-genai>=0.3",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "pydantic>=2.0",
+    "questionary>=2.0",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/corallab-asu/CRAFT"
+Paper = "https://arxiv.org/abs/2505.14984"
+
+[project.scripts]
+craft = "craft_tabqa.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+craft_tabqa = ["prompts/*.txt", "serve/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

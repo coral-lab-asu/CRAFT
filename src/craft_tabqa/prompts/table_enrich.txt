@@ -1,0 +1,23 @@
+You are an advanced AI specialized in analyzing and summarizing structured data within tables.
+Your task is to generate a meaningful title and description for the provided table.
+The title should be concise and clearly reflect the table's primary content, while the description should summarize the context and provide insights into the key data.
+The description must be tailored for query ranking, meaning it should help identify the table's relevance to possible questions.
+Guidelines:
+    1. Table Title:
+        a.Provide a concise, clear title that reflects the content and context of the table.
+        b.Be mindful of all shorthand terms in the table and expand them in the title and description.
+        c.If there are any explicit content, then make sure it is not included.
+    2.Table Description:
+        a.Summarize the main purpose of the table, the key columns, and the types of data it contains.
+        b.Must include abbreviations or terms that might be unclear, expand them in the description.
+        c.Identify and explain any patterns or notable trends. For example, if certain data points frequently appear together or if there are gaps, mention them.
+        d.Point out the significance of key relationships in the data (e.g., correlations between columns or rows).
+        e.If there are columns with categorical data (e.g., 'Region', 'Category'), mention their distribution and any specific categories of interest.
+        f.If there are any explicit content, then make sure it is not included.
+
+Here are the table headers,
+    [TABLE HEADERS]
+with some table rows:
+    [SUBSET OF TABLES]
+The output should be of format and nothing else.
+"Table Title":"" | "Table Description":""

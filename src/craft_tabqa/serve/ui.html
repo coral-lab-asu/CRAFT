@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRAFT — Table Retrieval</title>
+  <style>
+    :root {
+      --bg: #f7f8fa; --panel: #ffffff; --text: #1a1d24; --muted: #6b7280;
+      --border: #e4e7ec; --accent: #3b5bdb; --accent-soft: #edf0fd; --shadow: rgba(20,25,40,.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14161c; --panel: #1c1f27; --text: #e8eaed; --muted: #9aa0ac;
+        --border: #2b2f3a; --accent: #7c93f7; --accent-soft: #232838; --shadow: rgba(0,0,0,.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }
+    header { padding: 2rem 1.25rem 1rem; text-align: center; }
+    header h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.02em; }
+    header p { margin: .35rem 0 0; color: var(--muted); font-size: .95rem; }
+    main { max-width: 860px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    .search {
+      display: flex; gap: .6rem; margin: 1.25rem 0; flex-wrap: wrap;
+    }
+    .search input[type=text] {
+      flex: 1 1 300px; padding: .75rem .9rem; font-size: 1rem;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--panel); color: var(--text);
+    }
+    .search input[type=text]:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .search select, .search button {
+      padding: .75rem .9rem; font-size: .95rem; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    }
+    .search button {
+      background: var(--accent); color: #fff; border-color: transparent;
+      cursor: pointer; font-weight: 600;
+    }
+    .search button:disabled { opacity: .6; cursor: default; }
+    .status { color: var(--muted); font-size: .9rem; min-height: 1.2rem; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.1rem; margin: .8rem 0;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+    .card-head h3 { margin: 0; font-size: 1.05rem; }
+    .rank { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+    .score {
+      background: var(--accent-soft); color: var(--accent);
+      border-radius: 6px; padding: .1rem .45rem; font-size: .78rem; font-weight: 600;
+    }
+    .tid { color: var(--muted); font-size: .78rem; margin-top: .15rem; word-break: break-all; }
+    .table-wrap { overflow-x: auto; margin-top: .7rem; }
+    table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+    th, td { border: 1px solid var(--border); padding: .35rem .55rem; text-align: left; white-space: nowrap; }
+    th { background: var(--accent-soft); font-weight: 600; }
+    footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CRAFT</h1>
+    <p>Training-free cascaded retrieval for tabular question answering</p>
+  </header>
+  <main>
+    <form class="search" id="form">
+      <input type="text" id="q" placeholder="Ask a question about the tables…" autocomplete="off" />
+      <select id="k">
+        <option value="5">Top 5</option>
+        <option value="10" selected>Top 10</option>
+        <option value="20">Top 20</option>
+      </select>
+      <button type="submit" id="go">Search</button>
+    </form>
+    <div class="status" id="status"></div>
+    <div id="results"></div>
+  </main>
+  <footer>SPLADE → dense row reranking · results are the top matching tables</footer>
+
+  <script>
+    const form = document.getElementById("form");
+    const results = document.getElementById("results");
+    const statusEl = document.getElementById("status");
+    const go = document.getElementById("go");
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => (
+        {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]
+      ));
+    }
+
+    function renderTable(headers, rows) {
+      if (!headers.length && !rows.length) return "";
+      const head = headers.map(h => `<th>${escapeHtml(h)}</th>`).join("");
+      const body = rows.map(r =>
+        `<tr>${r.map(c => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`
+      ).join("");
+      return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+
+    function renderCard(hit) {
+      return `
+        <div class="card">
+          <div class="card-head">
+            <h3>${escapeHtml(hit.title || hit.table_id)}</h3>
+            <span class="rank">#${hit.rank} · <span class="score">${hit.score}</span></span>
+          </div>
+          <div class="tid">${escapeHtml(hit.table_id)}</div>
+          ${renderTable(hit.headers || [], hit.rows || [])}
+        </div>`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const question = document.getElementById("q").value.trim();
+      if (!question) return;
+      const top_k = parseInt(document.getElementById("k").value, 10);
+
+      go.disabled = true;
+      statusEl.textContent = "Searching…";
+      results.innerHTML = "";
+      try {
+        const resp = await fetch("/retrieve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, top_k }),
+        });
+        if (!resp.ok) throw new Error(`Server returned ${resp.status}`);
+        const data = await resp.json();
+        statusEl.textContent = `${data.results.length} tables for “${question}”`;
+        results.innerHTML = data.results.map(renderCard).join("");
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
+      } finally {
+        go.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

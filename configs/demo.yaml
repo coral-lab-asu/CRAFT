@@ -1,0 +1,33 @@
+# CRAFT demo config: a tiny 4-table corpus for trying the pipeline and the UIs.
+#   craft preprocess --config configs/demo.yaml
+#   craft retrieve   --config configs/demo.yaml
+#   craft serve      --config configs/demo.yaml   # web UI at http://localhost:8000
+#   craft tui                                      # pick "configs/demo.yaml" in the menu
+
+data:
+  dataset: custom
+  corpus_file:  examples/demo/corpus.jsonl
+  queries_file: examples/demo/queries.jsonl
+  output_dir:   results/demo
+  corpus_fields: title+headers+cells
+  query_type: query
+
+stage1:
+  model_id: naver/splade_v2_distil
+  sparse_top_k: 256
+  top_k: 4
+  batch_size: 8
+
+stage2:
+  model_id: sentence-transformers/all-mpnet-base-v2
+  mode: representative_row
+  top_k: 4
+  top_k_rows: 3
+  batch_size: 16
+
+stage3:
+  enabled: false        # set OPENAI_API_KEY to try Stage 3
+
+cuda_devices: "0"
+log_file: craft_demo.log
+eval_ks: [1, 2, 4]
