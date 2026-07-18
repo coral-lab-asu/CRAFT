@@ -18,7 +18,7 @@
       --brand-violet: #6d4bd6; --brand-teal: #2e9bb0;
 
       --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
-      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --gold: #b7860b; --gold-bright: var(--brand-gold); --green: #1f9d57;
       --ink: #16233a;
       --muted: #5a6b82; --body: #33445e;
       --border: #cfdcee; --border-soft: #e2ecf8;
@@ -31,7 +31,7 @@
     @media (prefers-color-scheme: dark) {
       :root {
         --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
-        --gold: #eec14a; --gold-bright: #f5c542;
+        --gold: #eec14a; --gold-bright: #f5c542; --green: #4ecb8b;
         --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
         --border: #30405a; --border-soft: #263346;
         --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
@@ -42,7 +42,7 @@
     }
     :root[data-theme="light"] {
       --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
-      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --gold: #b7860b; --gold-bright: var(--brand-gold); --green: #1f9d57;
       --ink: #16233a; --muted: #5a6b82; --body: #33445e;
       --border: #cfdcee; --border-soft: #e2ecf8;
       --page-bg: #f3f7fd; --surface: #fff; --surface-soft: #eaf2fc;
@@ -52,7 +52,7 @@
     }
     :root[data-theme="dark"] {
       --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
-      --gold: #eec14a; --gold-bright: #f5c542;
+      --gold: #eec14a; --gold-bright: #f5c542; --green: #4ecb8b;
       --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
       --border: #30405a; --border-soft: #263346;
       --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
@@ -298,7 +298,70 @@
     }
     .dl-btn:hover { border-color: var(--blue); }
 
-    .cards { margin-top: 1rem; display: grid; gap: 0.7rem; }
+    /* results + gold panel side by side */
+    .results-layout { margin-top: 1rem; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
+    @media (max-width: 800px) { .results-layout { grid-template-columns: 1fr; } }
+    .cards { display: grid; gap: 0.7rem; min-width: 0; }
+
+    /* ── Gold-table status panel ── */
+    .gold-panel {
+      position: sticky; top: 1rem; align-self: start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 0.9rem;
+      box-shadow: 0 8px 30px var(--shadow); overflow: hidden;
+    }
+    @media (max-width: 800px) { .gold-panel { position: static; } }
+    .gp-head {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.9rem;
+      background: color-mix(in srgb, var(--gold-bright) 12%, var(--surface));
+      border-bottom: 1px solid color-mix(in srgb, var(--gold-bright) 30%, var(--border));
+    }
+    .gp-head .gp-ico { color: var(--gold-bright); font-size: 1rem; line-height: 1; }
+    .gp-head .gp-t { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--gold); }
+    .gp-body { padding: 0.9rem; display: grid; gap: 0.85rem; }
+
+    /* recall gauge (circular) + verdict */
+    .gp-recall { display: flex; align-items: center; gap: 0.8rem; }
+    .gauge { --v: 0; --c: var(--muted); width: 62px; height: 62px; flex-shrink: 0; position: relative;
+      border-radius: 50%; background: conic-gradient(var(--c) calc(var(--v) * 1%), var(--border) 0); }
+    .gauge::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--surface); }
+    .gauge .gv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 800; color: var(--c); font-variant-numeric: tabular-nums; z-index: 1; }
+    .gp-recall .gp-verdict { display: grid; gap: 0.15rem; }
+    .gp-recall .gp-vlabel { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .gp-recall .gp-vval { font-size: 0.98rem; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: 0.35rem; }
+    .gp-recall .gp-vval.hit { color: var(--green, #2fa96b); }
+    .gp-recall .gp-vval.miss { color: var(--muted); }
+    .chk { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+      border-radius: 50%; background: #2fa96b; color: #fff; font-size: 0.7rem; font-weight: 900; }
+
+    /* gold table identity + rank */
+    .gp-gold { display: grid; gap: 0.4rem; padding: 0.7rem; border-radius: 0.6rem;
+      border: 1px solid var(--border); background: var(--surface-soft); }
+    .gp-gold.present { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright); }
+    .gp-gold .gg-title { font-size: 0.9rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 0.35rem; }
+    .gp-gold .gg-title .star { color: var(--gold-bright); }
+    .gp-gold .gg-id { font-size: 0.7rem; color: var(--muted); word-break: break-all; }
+    .gp-rankrow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.15rem; }
+    .gp-rankrow .rk-label { font-size: 0.74rem; color: var(--muted); font-weight: 600; }
+    .rk-badge { font-size: 0.8rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-variant-numeric: tabular-nums; }
+    .rk-badge.hit { background: color-mix(in srgb, var(--gold-bright) 22%, var(--surface)); color: var(--gold); }
+    .rk-badge.deep { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+
+    /* per-stage rank strip: gold's position as it flows through the cascade */
+    .gp-flow { display: grid; gap: 0.4rem; }
+    .gp-flow .gpf-t { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .gpf-row { display: flex; align-items: center; gap: 0.55rem; }
+    .gpf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .gpf-row.s1 .gpf-dot { background: var(--blue); } .gpf-row.s2 .gpf-dot { background: var(--gold-bright); }
+    .gpf-row.s3 .gpf-dot { background: var(--purple); }
+    .gpf-name { font-size: 0.78rem; color: var(--body); font-weight: 600; flex: 1; }
+    .gpf-name.cur { color: var(--ink); }
+    .gpf-rank { font-size: 0.76rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .gpf-rank.hit { color: var(--green, #2fa96b); } .gpf-rank.deep { color: var(--muted); }
+
+    .rcard { min-width: 0; }
     .rcard {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 0.7rem; padding: 0.85rem 1rem; position: relative;
@@ -307,7 +370,11 @@
     .rcard.top { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright), 0 2px 10px var(--shadow); }
     .rcard-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
     .rcard-head h4 { font-family: 'Inter', sans-serif; font-size: 0.98rem; margin: 0; color: var(--ink); }
-    .rcard-meta { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+    .rcard-meta { font-size: 0.76rem; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .rcard-meta .gold-tag { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--gold); background: color-mix(in srgb, var(--gold-bright) 20%, var(--surface));
+      padding: 0.05rem 0.4rem; border-radius: 999px; }
+    .rcard-head h4 .chk { vertical-align: middle; }
     .star { color: var(--gold-bright); }
     .score {
       background: color-mix(in srgb, var(--blue) 14%, var(--surface)); color: var(--blue);
@@ -537,7 +604,10 @@
             </div>
           </div>
 
-          <div class="cards" id="results"></div>
+          <div class="results-layout">
+            <div class="cards" id="results"></div>
+            <aside class="gold-panel" id="gold-panel" hidden aria-label="Gold table status"></aside>
+          </div>
         </div>
 
         <div id="empty-state" class="empty-state">
@@ -781,6 +851,7 @@ craft tui                                            <span class="cmt"># menu-dr
     curQuestion: document.getElementById("cur-question"),
     curQid: document.getElementById("cur-qid"),
     results: document.getElementById("results"),
+    goldPanel: document.getElementById("gold-panel"),
   };
 
   async function loadDataset(ds) {
@@ -848,12 +919,96 @@ craft tui                                            <span class="cmt"># menu-dr
     }
     return `<div class="rcard${isGold?' top':''}">
       <div class="rcard-head">
-        <h4>${isGold?'<span class="star">★</span> ':''}${esc(t.title)}</h4>
-        <span class="rcard-meta">#${rank}</span>
+        <h4>${isGold?'<span class="star">★</span> ':''}${esc(t.title)}${isGold?' <span class="chk">✓</span>':''}</h4>
+        <span class="rcard-meta">${isGold?'<span class="gold-tag">gold</span> ':''}#${rank}</span>
       </div>
       <div class="tid">${esc(tableId)}</div>
       ${preview}
     </div>`;
+  }
+
+  // Rank (1-based) of the first gold table within a ranked id list, or 0 if absent.
+  function goldRankIn(ids, goldSet) {
+    for (let i = 0; i < ids.length; i++) if (goldSet.has(ids[i])) return i + 1;
+    return 0;
+  }
+
+  const STAGE_META = {
+    stage1: { name: "Stage 1 · SPLADE", cls: "s1" },
+    stage2: { name: "Stage 2 · Dense", cls: "s2" },
+    stage3: { name: "Stage 3 · Rerank", cls: "s3" },
+  };
+
+  function renderGoldPanel() {
+    const q = state.query;
+    const goldIds = q.gold_table_ids || [];
+    if (!goldIds.length) { els.goldPanel.hidden = true; return; }
+    els.goldPanel.hidden = false;
+
+    const goldSet = new Set(goldIds);
+    const goldId = goldIds[0];
+    const goldTitle = ((state.data.tables || {})[goldId] || {}).title || goldId;
+
+    // The list shipped to the site is capped at 5 per stage; a gold not found in
+    // it is "beyond" that shown depth rather than truly unranked.
+    const capN = 5;
+    const stageIds = q.stages[state.stage] || [];
+    const rankFull = goldRankIn(stageIds, goldSet);      // exact rank within shipped list
+    const inTopK = rankFull > 0 && rankFull <= state.k;  // visible at current "show top"
+
+    // Recall@k for the current stage: is a gold table within the top-k shown?
+    const hit = rankFull > 0 && rankFull <= state.k;
+    const recallPct = hit ? 100 : 0;
+    const gaugeColor = hit ? "var(--green)" : "var(--muted)";
+
+    const rankBadge = rankFull > 0
+      ? `<span class="rk-badge hit">#${rankFull}</span>`
+      : `<span class="rk-badge deep">beyond top ${capN}</span>`;
+
+    const presentClass = rankFull > 0 ? " present" : "";
+    const titleMark = rankFull > 0 ? '<span class="star">★</span>' : "";
+    const checkMark = inTopK ? '<span class="chk">✓</span>' : "";
+
+    // Per-stage flow: where the gold table sits as it moves through the cascade.
+    const flow = ["stage1", "stage2", "stage3"].map(st => {
+      const r = goldRankIn(q.stages[st] || [], goldSet);
+      const meta = STAGE_META[st];
+      const cur = st === state.stage ? " cur" : "";
+      const rk = r > 0
+        ? `<span class="gpf-rank hit">#${r}</span>`
+        : `<span class="gpf-rank deep">— </span>`;
+      return `<div class="gpf-row ${meta.cls}">
+        <span class="gpf-dot"></span>
+        <span class="gpf-name${cur}">${esc(meta.name)}</span>${rk}
+      </div>`;
+    }).join("");
+
+    const verdictLabel = STAGE_META[state.stage].name.split(" · ")[0];
+    els.goldPanel.innerHTML = `
+      <div class="gp-head"><span class="gp-ico">◆</span><span class="gp-t">Gold table</span></div>
+      <div class="gp-body">
+        <div class="gp-recall">
+          <div class="gauge" style="--v:${recallPct};--c:${gaugeColor}"><span class="gv">${hit ? "1.0" : "0.0"}</span></div>
+          <div class="gp-verdict">
+            <span class="gp-vlabel">Recall @ ${state.k} · ${esc(verdictLabel)}</span>
+            <span class="gp-vval ${hit ? "hit" : "miss"}">${hit ? '<span class="chk">✓</span> found' : "not in top " + state.k}</span>
+          </div>
+        </div>
+
+        <div class="gp-gold${presentClass}">
+          <div class="gg-title">${titleMark}${esc(goldTitle)}${checkMark}</div>
+          <div class="gg-id">${esc(goldId)}</div>
+          <div class="gp-rankrow">
+            <span class="rk-label">Rank in ${esc(verdictLabel)}</span>
+            ${rankBadge}
+          </div>
+        </div>
+
+        <div class="gp-flow">
+          <span class="gpf-t">Gold rank through the cascade</span>
+          ${flow}
+        </div>
+      </div>`;
   }
 
   function renderResults() {
@@ -863,9 +1018,10 @@ craft tui                                            <span class="cmt"># menu-dr
     const shown = state.k === 0 ? ids : ids.slice(0, state.k);
     if (!shown.length) {
       els.results.innerHTML = `<p class="empty-state">No tables recorded for this stage.</p>`;
-      return;
+    } else {
+      els.results.innerHTML = shown.map((id, i) => tableCard(id, i+1, gold.has(id))).join("");
     }
-    els.results.innerHTML = shown.map((id, i) => tableCard(id, i+1, gold.has(id))).join("");
+    renderGoldPanel();
   }
 
   /* search interactions */
