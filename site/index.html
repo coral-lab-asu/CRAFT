@@ -249,12 +249,18 @@
     .suggestions li .sg-id { font-size: 0.72rem; color: var(--muted); font-family: 'SFMono-Regular',monospace; }
 
     .empty-state { text-align: center; color: var(--muted); padding: 1.6rem 1rem 0.6rem; font-size: 0.92rem; }
-    .es-hint { margin-top: 0.5rem; font-size: 0.85rem; }
+    .es-hint { margin-top: 0.7rem; font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
     .es-ex {
       background: var(--surface-soft); border: 1px solid var(--border); border-radius: 999px;
-      padding: 0.2rem 0.7rem; cursor: pointer; color: var(--blue); font-family: inherit; font-size: 0.82rem;
+      padding: 0.3rem 0.85rem; cursor: pointer; color: var(--blue); font-family: inherit; font-size: 0.82rem;
+      max-width: 100%; text-align: left; transition: border-color .15s ease, background .15s ease;
     }
-    .es-ex:hover { border-color: var(--blue); }
+    .es-ex:hover, .es-ex:focus-visible { border-color: var(--blue); background: var(--surface); }
+    .es-shuffle {
+      background: none; border: 1px dashed var(--border); border-radius: 999px; color: var(--muted);
+      padding: 0.3rem 0.85rem; cursor: pointer; font-family: inherit; font-size: 0.82rem;
+    }
+    .es-shuffle:hover { border-color: var(--blue); color: var(--blue); }
 
     /* current question line */
     .qline { margin: 1rem 0 0.4rem; font-size: 0.98rem; color: var(--ink); }
@@ -278,6 +284,59 @@
     .stage-node.active { border-color: var(--blue); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent); }
     .stage-node.s3.active { border-color: var(--purple); box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 25%, transparent); }
     .sf-arrow { align-self: center; color: var(--gold-bright); font-weight: 800; }
+
+    /* ─── How-it-works: fast auto-cycling stage explainer ───────────── */
+    .hiw { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
+      box-shadow: 0 8px 30px var(--shadow); padding: 1.2rem 1.3rem 1.3rem; }
+    .hiw-flow { display: flex; align-items: stretch; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .hiw-node {
+      flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 0.15rem; align-items: flex-start;
+      padding: 0.55rem 0.85rem 0.6rem; border-radius: 0.6rem; cursor: pointer; text-align: left;
+      background: var(--surface-soft); border: 1px solid var(--border); font-family: 'Inter', sans-serif;
+      position: relative; overflow: hidden;
+    }
+    .hiw-node::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; opacity: 0.5; }
+    .hiw-node.s1::before { background: var(--blue); } .hiw-node.s2::before { background: var(--gold-bright); }
+    .hiw-node.s3::before { background: var(--purple); }
+    .hiw-node .sn-k { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .hiw-node .sn-n { font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+    .hiw-node.active { background: var(--surface); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent); }
+    .hiw-node.s2.active { box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold-bright) 35%, transparent); }
+    .hiw-node.s3.active { box-shadow: 0 0 0 2px color-mix(in srgb, var(--purple) 25%, transparent); }
+    .hiw-progress { position: absolute; bottom: 0; left: 0; height: 2.5px; width: 0%; background: var(--blue); }
+    .hiw-node.s2 .hiw-progress { background: var(--gold-bright); } .hiw-node.s3 .hiw-progress { background: var(--purple); }
+    .hiw-node.active .hiw-progress { transition: width linear; }
+    @media (prefers-reduced-motion: reduce) { .hiw-node.active .hiw-progress { transition: none; } }
+
+    .hiw-body { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.1rem; align-items: stretch; }
+    @media (max-width: 720px) { .hiw-body { grid-template-columns: 1fr; } }
+    .hiw-visual {
+      background: var(--surface-soft); border: 1px solid var(--border); border-radius: 0.7rem;
+      padding: 0.9rem; min-height: 150px; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;
+    }
+    .hiw-tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 4px; }
+    .hiw-tglyph { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: var(--surface);
+      aspect-ratio: 4 / 3; display: flex; flex-direction: column; transition: opacity .35s ease, transform .35s ease; }
+    .hiw-tglyph .tg-head { height: 30%; background: var(--blue); }
+    .hiw-tglyph .tg-body { flex: 1; background: repeating-linear-gradient(to bottom, var(--border-soft), var(--border-soft) 2px, transparent 2px, transparent 5px); }
+    .hiw-tglyph.dim { opacity: 0.15; }
+    .hiw-tglyph.keep1 { box-shadow: 0 0 0 1.5px var(--blue); }
+    .hiw-tglyph.keep2 { box-shadow: 0 0 0 1.5px var(--gold-bright); }
+    .hiw-tglyph.keep3 { box-shadow: 0 0 0 1.5px var(--purple); transform: scale(1.08); }
+    .hiw-count { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .hiw-count b { color: var(--ink); }
+
+    .hiw-info { display: flex; flex-direction: column; justify-content: center; gap: 0.5rem; }
+    .hiw-what { font-size: 0.88rem; color: var(--body); line-height: 1.45; }
+    .hiw-benefit {
+      display: flex; align-items: baseline; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 0.55rem;
+      background: color-mix(in srgb, var(--green) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+    }
+    .hiw-benefit .hb-num { font-size: 1.15rem; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+    .hiw-benefit .hb-txt { font-size: 0.78rem; color: var(--body); }
+    @media (prefers-reduced-motion: reduce) {
+      .hiw-tglyph { transition: none; }
+    }
 
     /* result controls */
     .result-controls { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 0.9rem 0 0.2rem; }
@@ -551,6 +610,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       arXiv
     </a>
+    <a class="btn btn-outline" href="https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>
+      Datasets
+    </a>
     <a class="btn btn-outline" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.38 7.86 10.9.57.1.78-.25.78-.55v-1.92c-3.19.69-3.86-1.54-3.86-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.27-5.23-5.67 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.95 10.95 0 012.87-.39c.97.01 1.95.13 2.87.39 2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.41-2.69 5.38-5.25 5.66.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.79.55C20.21 21.38 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
       Code
@@ -561,6 +624,25 @@
 <main>
   <!-- ══════════ DEMO PANEL ══════════ -->
   <div class="panel" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
+
+    <div class="eyebrow">How it works</div>
+    <h2 class="h-sec">Three stages, each trading compute for recall</h2>
+    <p class="lead">Every candidate table survives a stage only if it looks relevant enough to keep. Watch each
+      stage narrow the corpus, or click one to pin it.</p>
+
+    <div class="hiw mt-lg" id="hiw">
+      <div class="hiw-flow" role="tablist" aria-label="Pipeline stage">
+        <button class="hiw-node s1 active" data-hiw="0"><span class="sn-k">Stage 1 · Sparse</span><span class="sn-n">SPLADE</span><span class="hiw-progress"></span></button>
+        <button class="hiw-node s2" data-hiw="1"><span class="sn-k">Stage 2 · Dense</span><span class="sn-n">Sentence Transformer</span><span class="hiw-progress"></span></button>
+        <button class="hiw-node s3" data-hiw="2"><span class="sn-k">Stage 3 · Rerank</span><span class="sn-n">Embedding API</span><span class="hiw-progress"></span></button>
+      </div>
+      <div class="hiw-body">
+        <div class="hiw-visual" id="hiw-visual"></div>
+        <div class="hiw-info" id="hiw-info"></div>
+      </div>
+    </div>
+
+    <hr class="divider" />
 
     <div class="eyebrow">Explore results</div>
     <h2 class="h-sec">Browse what CRAFT retrieves</h2>
@@ -615,8 +697,8 @@
         </div>
 
         <div id="empty-state" class="empty-state">
-          <p>Start typing a question above to see CRAFT's retrieved tables.</p>
-          <p class="es-hint">Try: <button class="es-ex" type="button">where does the brazos river start and stop</button></p>
+          <p>Start typing a question above, or try one of these:</p>
+          <p class="es-hint" id="es-examples"></p>
         </div>
       </div>
     </div>
@@ -652,7 +734,9 @@ craft retrieve   --config configs/my_dataset.yaml
 craft serve      --config configs/my_dataset.yaml   <span class="cmt"># web UI at http://localhost:8000</span>
 craft tui                                            <span class="cmt"># menu-driven terminal app</span></pre>
     <p class="lead" style="margin-top:0.8rem;">Custom-dataset format and full docs are in the
-      <a href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub repository</a>.</p>
+      <a href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub repository</a>. Pre-generated
+      enrichment data for NQ-Tables/OTT-QA is on
+      <a href="https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa" target="_blank" rel="noopener">Hugging Face</a>.</p>
   </div>
 
   <!-- ══════════ PAPER PANEL ══════════ -->
@@ -722,6 +806,18 @@ craft tui                                            <span class="cmt"># menu-dr
         <p>Questions that reason across tables and passages.</p>
       </div>
     </div>
+
+    <p class="lead mt-lg">
+      The LLM-generated table titles/descriptions and question sub-questions for both
+      benchmarks are published on
+      <a href="https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa" target="_blank" rel="noopener" style="font-weight:600;">
+        <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/dataset-on-hf-sm.svg" alt="" style="height:1em;vertical-align:-0.15em;margin-right:0.35em;" />Hugging Face</a> —
+      no need to regenerate them yourself.
+    </p>
+    <pre class="code"><span class="cmt"># download the pre-generated enrichment data</span>
+pip install huggingface_hub[hf_xet]
+hf download AdarshSingh7647/nq-tables-craft-enrichment --repo-type dataset --local-dir datasets/NQ_Tables/craft
+hf download AdarshSingh7647/ottqa-craft-enrichment      --repo-type dataset --local-dir datasets/OTT-QA/craft</pre>
 
     <hr class="divider" />
 
@@ -835,6 +931,92 @@ craft tui                                            <span class="cmt"># menu-dr
     }, 4500);
   })();
 
+  /* ── How-it-works: fast auto-cycling stage explainer ──
+     Loops Stage 1 → 2 → 3 every ~2.3s each (≈7s per full loop). Clicking a
+     stage-node jumps straight there and holds briefly before auto-advance
+     resumes, so a curious visitor never fights the loop. Numbers are the
+     measured NQ-Tables recall figures from the results recall_summary.csv files. */
+  (function howItWorks() {
+    const STAGES = [
+      {
+        cls: "s1", tag: "Stage 1 · Sparse", name: "SPLADE",
+        what: "A lexical (bag-of-words) index scans the <b>entire corpus</b> — every table's LLM-enriched title, description, headers, and cells — to cheaply cast a wide net.",
+        benefit: "99.5%", benefitTxt: "recall@5,000 on NQ-Tables — the gold table almost never falls out of the first cut.",
+        total: 24, keep: 24, keepCls: "keep1",
+      },
+      {
+        cls: "s2", tag: "Stage 2 · Dense", name: "Sentence Transformer",
+        what: "Each surviving table is reduced to its best-matching rows and scored by <b>meaning</b>, not shared words — trimming 5,000 candidates to 100.",
+        benefit: "95.4%", benefitTxt: "recall@100 on NQ-Tables, up from 31.8% → 35.4% recall@1 over Stage 1.",
+        total: 24, keep: 10, keepCls: "keep2",
+      },
+      {
+        cls: "s3", tag: "Stage 3 · Rerank", name: "Embedding API",
+        what: "A stronger embedding model reranks only the <b>finalists</b> — OpenAI or Gemini embeddings pick the precise top-<i>k</i> shortlist.",
+        benefit: "97.1%", benefitTxt: "recall@50 on NQ-Tables, and recall@1 climbs to 49.9% — 1.6× Stage 1's.",
+        total: 10, keep: 4, keepCls: "keep3",
+      },
+    ];
+    const STAGE_MS = 2300; // 3 × 2.3s ≈ 7s per loop
+
+    const nodes = [...document.querySelectorAll(".hiw-node")];
+    const visual = document.getElementById("hiw-visual");
+    const info = document.getElementById("hiw-info");
+    let idx = 0, timer = null, resumeTimer = null;
+
+    function glyphs(s) {
+      let out = "";
+      for (let i = 0; i < s.total; i++) {
+        const cls = i < s.keep ? s.keepCls : "dim";
+        out += `<div class="hiw-tglyph ${cls}"><div class="tg-head"></div><div class="tg-body"></div></div>`;
+      }
+      return out;
+    }
+
+    function render(i) {
+      const s = STAGES[i];
+      visual.innerHTML = `<div class="hiw-tgrid">${glyphs(s)}</div>
+        <div class="hiw-count">Keeping <b>${s.keep}</b> of <b>${s.total}</b> shown candidates</div>`;
+      info.innerHTML = `<div class="hiw-what">${s.what}</div>
+        <div class="hiw-benefit"><span class="hb-num">${s.benefit}</span><span class="hb-txt">${s.benefitTxt}</span></div>`;
+      nodes.forEach((n, j) => {
+        n.classList.toggle("active", j === i);
+        const bar = n.querySelector(".hiw-progress");
+        bar.style.transition = "none";
+        bar.style.width = j < i ? "100%" : "0%";
+      });
+      // Kick the active bar's fill on the next frame so the transition runs.
+      requestAnimationFrame(() => {
+        const bar = nodes[i].querySelector(".hiw-progress");
+        bar.style.transition = `width ${STAGE_MS}ms linear`;
+        bar.style.width = "100%";
+      });
+    }
+
+    function advance() {
+      idx = (idx + 1) % STAGES.length;
+      render(idx);
+    }
+
+    function play() {
+      stop();
+      timer = setInterval(advance, STAGE_MS);
+    }
+    function stop() { clearInterval(timer); }
+
+    function jumpTo(i) {
+      clearTimeout(resumeTimer);
+      idx = i; render(idx); stop();
+      resumeTimer = setTimeout(play, STAGE_MS * 1.6); // brief hold, then resume the loop
+    }
+
+    nodes.forEach((n, i) => n.addEventListener("click", () => jumpTo(i)));
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    render(0);
+    if (!reduced) play();
+  })();
+
   /* ── Result browser: lazy-load a dataset's precomputed results and search them ── */
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -863,6 +1045,7 @@ craft tui                                            <span class="cmt"># menu-dr
     suggestions: document.getElementById("suggestions"),
     resultArea: document.getElementById("result-area"),
     emptyState: document.getElementById("empty-state"),
+    esExamples: document.getElementById("es-examples"),
     curQuestion: document.getElementById("cur-question"),
     curQid: document.getElementById("cur-qid"),
     results: document.getElementById("results"),
@@ -870,7 +1053,7 @@ craft tui                                            <span class="cmt"># menu-dr
   };
 
   async function loadDataset(ds) {
-    if (state.cache[ds]) { state.data = state.cache[ds]; return; }
+    if (state.cache[ds]) { state.data = state.cache[ds]; renderExamples(); return; }
     els.dsStatus.textContent = "loading…";
     try {
       const resp = await fetch(`data/${ds}.json`);
@@ -878,11 +1061,39 @@ craft tui                                            <span class="cmt"># menu-dr
       const data = await resp.json();
       state.cache[ds] = data; state.data = data;
       els.dsStatus.textContent = `${data.num_queries.toLocaleString()} queries`;
+      renderExamples();
     } catch (e) {
       els.dsStatus.textContent = "data unavailable";
       state.data = null;
     }
   }
+
+  // A handful of real questions from the loaded dataset, short enough to read
+  // as a chip. Re-picked on dataset switch and on shuffle so new users always
+  // have something to click regardless of which dataset is active.
+  const EX_MAX_LEN = 70;
+  function renderExamples() {
+    if (!state.data) { els.esExamples.innerHTML = ""; return; }
+    const pool = state.data.queries.filter(q => q.question.length <= EX_MAX_LEN);
+    const src = pool.length >= 3 ? pool : state.data.queries;
+    const picks = [];
+    const used = new Set();
+    while (picks.length < 3 && picks.length < src.length) {
+      const i = Math.floor(Math.random() * src.length);
+      if (used.has(i)) continue;
+      used.add(i); picks.push(src[i]);
+    }
+    els.esExamples.innerHTML = picks.map(q =>
+      `<button class="es-ex" type="button" data-qid="${esc(q.qid)}">${esc(q.question)}</button>`
+    ).join("") + `<button class="es-shuffle" type="button" title="Show different examples">↻ more</button>`;
+  }
+  els.esExamples.addEventListener("click", (e) => {
+    const shuffle = e.target.closest(".es-shuffle");
+    if (shuffle) { renderExamples(); return; }
+    const btn = e.target.closest(".es-ex"); if (!btn) return;
+    const item = state.data.queries.find(x => x.qid === btn.dataset.qid);
+    if (item) selectQuery(item);
+  });
 
   function matchQuestions(text) {
     if (!state.data) return [];
@@ -1116,10 +1327,6 @@ craft tui                                            <span class="cmt"># menu-dr
     await loadDataset(state.ds);
   });
 
-  /* example shortcut */
-  document.querySelector(".es-ex").addEventListener("click", () => {
-    els.search.value = "brazos river"; renderSuggestions(matchQuestions("brazos river")); els.search.focus();
-  });
 
   loadDataset("nq");  // preload the default dataset for the explorer
 

@@ -1,8 +1,18 @@
+<div align="center">
+
 # CRAFT: Training-Free Cascaded Retrieval for Tabular QA
 
-[![Paper](https://img.shields.io/badge/Paper-ACL%202026-red)](https://arxiv.org/abs/2505.14984)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Paper](https://img.shields.io/badge/Paper-ACL%202026-b31b1b?logo=googlescholar&logoColor=white)](https://aclanthology.org/2026.acl-long.149/)
+[![arXiv](https://img.shields.io/badge/arXiv-2505.14984-b31b1b?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2505.14984)
+[![Hugging Face Datasets](https://img.shields.io/badge/🤗%20Datasets-CRAFT%20Collection-yellow)](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa)
+[![Poster](https://img.shields.io/badge/🖼️-Poster-6f42c1)](site/CRAFT_poster.jpg)
+[![Slides](https://img.shields.io/badge/📊-Slides-orange)](site/CRAFT_slides.pdf)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white)](https://www.python.org/downloads/)
+
+**[📄 Paper](https://aclanthology.org/2026.acl-long.149/) · [🖼️ Poster](site/CRAFT_poster.jpg) · [📊 Slides](site/CRAFT_slides.pdf) · [🤗 Datasets](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa) · [🌐 Website](https://coral-lab-asu.github.io/CRAFT/)**
+
+</div>
 
 CRAFT is a **training-free**, three-stage cascaded retriever for open-domain table
 question answering. It reaches state-of-the-art retrieval on NQ-Tables and strong
@@ -15,7 +25,12 @@ zero-shot generalisation on OTT-QA with **no dataset-specific fine-tuning**.
 | **Stage 3** | OpenAI / Gemini embeddings | 100 → top 50 *(optional)* |
 
 An optional **LLM enrichment** step can generate table titles/descriptions (and
-expand queries) with a small open-source model before indexing.
+expand queries) before indexing. The pre-generated enrichment data — table
+titles/descriptions for NQ-Tables and query sub-questions for both NQ-Tables and
+OTT-QA — was produced with **Gemini 1.5 Flash** and is published on the
+[🤗 CRAFT Hugging Face collection](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa)
+(see [Data setup](#data-setup-nq-tables-and-ott-qa) below); the tool itself also
+supports local generation via vLLM/transformers if you'd rather run your own model.
 
 ---
 
@@ -33,7 +48,7 @@ pip install "craft-tabqa[all]"          # everything except vllm
 From source:
 
 ```bash
-git clone https://github.com/corallab-asu/CRAFT.git
+git clone https://github.com/coral-lab-asu/CRAFT.git
 cd CRAFT
 pip install -e ".[dev]"
 ```
@@ -99,6 +114,14 @@ scale), `transformers` (dependency-light), or `openai`. Generated fields are
 cached to `table_enrichment.jsonl` / `query_expansion.jsonl`, so the step is
 resumable.
 
+The titles/descriptions/sub-questions distributed with this repo (also on
+[🤗 Hugging Face](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa),
+see [Data setup](#data-setup-nq-tables-and-ott-qa)) were generated with the
+**Gemini 1.5 Flash** API, not one of the backends above — those local raw
+files also live at
+[`datasets/nq_table_summary_table_description.jsonl`](datasets/nq_table_summary_table_description.jsonl)
+and [`datasets/OTT_QA_Qeuery_Desc.jsonl`](datasets/OTT_QA_Qeuery_Desc.jsonl).
+
 ---
 
 ## Stage 2 modes
@@ -136,6 +159,30 @@ Point a config at your own JSONL files (see
 ---
 
 ## Data setup (NQ-Tables and OTT-QA)
+
+[![Datasets on Hugging Face](https://huggingface.co/datasets/huggingface/badges/resolve/main/dataset-on-hf-md.svg)](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa)
+
+The generated table titles/descriptions and query sub-questions are hosted on
+the [CRAFT Hugging Face collection](https://huggingface.co/collections/AdarshSingh7647/craft-training-free-cascaded-retrieval-for-tabular-qa) —
+grab them with:
+
+```bash
+pip install huggingface_hub[hf_xet]
+hf download AdarshSingh7647/nq-tables-craft-enrichment --repo-type dataset --local-dir datasets/NQ_Tables/craft
+hf download AdarshSingh7647/ottqa-craft-enrichment      --repo-type dataset --local-dir datasets/OTT-QA/craft
+```
+
+or in Python:
+
+```python
+from datasets import load_dataset
+
+nq_tables    = load_dataset("AdarshSingh7647/nq-tables-craft-enrichment", "table_titles_descriptions", split="train")
+nq_questions = load_dataset("AdarshSingh7647/nq-tables-craft-enrichment", "question_subquestions", split="train")
+ottqa_questions = load_dataset("AdarshSingh7647/ottqa-craft-enrichment", split="train")
+```
+
+You'll still need the original corpora/questions to run the full pipeline:
 
 - **NQ-Tables** — download `tables.jsonl` and `combined.jsonl` from the
   [TAPAS NQ-Tables release](https://github.com/google-research/tapas/blob/master/DENSE_TABLE_RETRIEVER.md)
