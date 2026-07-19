@@ -167,6 +167,26 @@ src/craft_tabqa/
   booktitle = {Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics},
   year      = {2026},
   url       = {https://aclanthology.org/2026.acl-long.149/},
+@inproceedings{singh-etal-2026-craft,
+    title = "{CRAFT}: Training-Free Cascaded Retrieval for Tabular {QA}",
+    author = "Singh, Adarsh  and
+      Bhandari, Kushal Raj  and
+      Gao, Jianxi  and
+      Dan, Soham  and
+      Gupta, Vivek",
+    editor = "Liakata, Maria  and
+      Moreira, Viviane P.  and
+      Zhang, Jiajun  and
+      Jurgens, David",
+    booktitle = "Proceedings of the 64th Annual Meeting of the {A}ssociation for {C}omputational {L}inguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2026",
+    address = "San Diego, California, United States",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.acl-long.149/",
+    doi = "10.18653/v1/2026.acl-long.149",
+    pages = "3284--3298",
+    ISBN = "979-8-89176-390-6"
 }
 ```
 

@@ -18,7 +18,7 @@
       --brand-violet: #6d4bd6; --brand-teal: #2e9bb0;
 
       --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
-      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --gold: #b7860b; --gold-bright: var(--brand-gold); --green: #1f9d57;
       --ink: #16233a;
       --muted: #5a6b82; --body: #33445e;
       --border: #cfdcee; --border-soft: #e2ecf8;
@@ -31,7 +31,7 @@
     @media (prefers-color-scheme: dark) {
       :root {
         --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
-        --gold: #eec14a; --gold-bright: #f5c542;
+        --gold: #eec14a; --gold-bright: #f5c542; --green: #4ecb8b;
         --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
         --border: #30405a; --border-soft: #263346;
         --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
@@ -42,7 +42,7 @@
     }
     :root[data-theme="light"] {
       --blue: #2f6fd0; --blue-dk: #1e4fa0; --purple: var(--brand-violet);
-      --gold: #b7860b; --gold-bright: var(--brand-gold);
+      --gold: #b7860b; --gold-bright: var(--brand-gold); --green: #1f9d57;
       --ink: #16233a; --muted: #5a6b82; --body: #33445e;
       --border: #cfdcee; --border-soft: #e2ecf8;
       --page-bg: #f3f7fd; --surface: #fff; --surface-soft: #eaf2fc;
@@ -52,7 +52,7 @@
     }
     :root[data-theme="dark"] {
       --blue: #6ea8fe; --blue-dk: #4f8ee8; --purple: #b090f5;
-      --gold: #eec14a; --gold-bright: #f5c542;
+      --gold: #eec14a; --gold-bright: #f5c542; --green: #4ecb8b;
       --ink: #e7eef8; --muted: #93a2b8; --body: #c2cdde;
       --border: #30405a; --border-soft: #263346;
       --page-bg: #0e141d; --surface: #161e2a; --surface-soft: #1a2536;
@@ -87,7 +87,7 @@
     .brand .c { color: var(--blue); }
     /* Prominent segmented Demo/Paper control */
     .segmented {
-      display: inline-flex; gap: 2px; margin-left: 0.9rem; padding: 3px;
+      display: inline-flex; gap: 2px; margin-left: 0.9rem; padding: 3px; position: relative;
       background: var(--surface-soft); border: 1px solid var(--border); border-radius: 0.6rem;
     }
     .seg-btn {
@@ -99,6 +99,31 @@
     .seg-btn.active { color: #fff; background: var(--blue); box-shadow: 0 1px 4px var(--shadow); }
     :root[data-theme="dark"] .seg-btn.active { color: #0e141d; }
     @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg-btn.active { color: #0e141d; } }
+
+    /* Delayed "point here" cue: nudges a Paper-landing visitor toward the Demo. */
+    .seg-btn.cue { color: var(--blue); animation: cue-glow 1.6s ease-in-out infinite; }
+    @keyframes cue-glow {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold-bright) 70%, transparent); }
+      50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold-bright) 0%, transparent); }
+    }
+    .cue-hint {
+      position: absolute; top: calc(100% + 10px); left: 0; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: var(--gold-bright); color: #3a2c05; font-size: 0.8rem; font-weight: 700;
+      padding: 0.4rem 0.7rem; border-radius: 0.5rem; box-shadow: 0 6px 20px var(--shadow);
+      opacity: 0; transform: translateY(-4px); pointer-events: none;
+      transition: opacity .35s ease, transform .35s ease; z-index: 30;
+    }
+    .cue-hint.show { opacity: 1; transform: translateY(0); animation: cue-bob 1.8s ease-in-out infinite; }
+    .cue-hint::before {
+      content: ""; position: absolute; bottom: 100%; left: 1.4rem;
+      border: 6px solid transparent; border-bottom-color: var(--gold-bright);
+    }
+    @keyframes cue-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .seg-btn.cue { animation: none; }
+      .cue-hint.show { animation: none; }
+    }
     .topbar-spacer { flex: 1; }
     .topbar a.ghost { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
     .topbar a.ghost:hover { color: var(--blue); text-decoration: none; }
@@ -153,105 +178,6 @@
     .h-sec { font-size: 1.45rem; margin-bottom: 0.3rem; }
     .lead { color: var(--body); font-size: 0.98rem; max-width: 62ch; }
     .divider { border: none; border-top: 1px solid var(--border); margin: 2.4rem 0; }
-
-    /* ─── Pipeline animation ─────────────────── */
-    .anim {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
-      box-shadow: 0 8px 30px var(--shadow); overflow: hidden; margin-bottom: 1.4rem;
-    }
-    .anim-stage {
-      position: relative; min-height: 340px; padding: 1.1rem 1.2rem 0.6rem;
-      background:
-        radial-gradient(1200px 300px at 50% -10%, color-mix(in srgb, var(--blue) 8%, transparent), transparent);
-    }
-    .anim-caption {
-      display: flex; align-items: center; gap: 0.5rem; min-height: 1.6rem;
-      font-size: 0.9rem; color: var(--body); margin-bottom: 0.6rem;
-    }
-    .anim-caption .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-bright); flex-shrink: 0; }
-    .anim-caption b { color: var(--blue); }
-
-    /* the question chip that drives the flow */
-    .q-chip {
-      display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%;
-      background: color-mix(in srgb, var(--blue) 12%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--surface));
-      color: var(--ink); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.86rem;
-    }
-    .q-chip .q-ico { color: var(--blue); }
-
-    /* columns for the parallel stages */
-    .anim-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.8rem; }
-    @media (max-width: 680px) { .anim-cols { grid-template-columns: 1fr; } }
-    .anim-col { min-height: 210px; }
-    .col-head {
-      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted); margin-bottom: 0.5rem;
-    }
-    .col-head .badge { font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 999px;
-      background: var(--surface-soft); border: 1px solid var(--border); color: var(--body); font-variant-numeric: tabular-nums; }
-    .col-s1 .col-head { color: var(--blue); }
-    .col-s2 .col-head { color: var(--gold); }
-
-    /* a compact "table glyph": header bar + cells, so the corpus reads as TABLES */
-    .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
-    .tglyph {
-      border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface);
-      aspect-ratio: 4 / 3; display: flex; flex-direction: column; transition: opacity .4s, transform .4s, box-shadow .3s;
-    }
-    .tglyph .tg-head { height: 26%; background: var(--blue); position: relative; }
-    .tglyph .tg-head::before { content:''; position:absolute; left:0; top:0; width:22%; height:100%; background: var(--purple); }
-    .tglyph .tg-body { flex: 1; background:
-      repeating-linear-gradient(to bottom, var(--surface-soft), var(--surface-soft) 3px, transparent 3px, transparent 6px); }
-    .tglyph.dim { opacity: 0.12; }
-    .tglyph.keep { box-shadow: 0 0 0 2px var(--blue); }
-    .tglyph.keep2 { box-shadow: 0 0 0 2px var(--gold-bright); }
-    .tglyph.pop { transform: scale(1.06); }
-
-    /* a real mini-table built during the animation */
-    .anim-mini {
-      margin-top: 0.4rem; border: 1px solid var(--gold-bright); border-radius: 0.55rem; overflow: hidden;
-      box-shadow: 0 4px 16px var(--shadow); animation: mini-in .5s ease;
-    }
-    @keyframes mini-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    .anim-mini .am-title { font-size: 0.8rem; font-weight: 700; color: var(--ink);
-      padding: 0.4rem 0.6rem; background: var(--surface-soft); border-bottom: 1px solid var(--border); }
-    .anim-mini table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
-    .anim-mini th, .anim-mini td { border-bottom: 1px solid var(--border); padding: 0.28rem 0.5rem; text-align: left;
-      max-width: 160px; white-space: nowrap; }
-    .anim-mini th { background: color-mix(in srgb, var(--blue) 8%, var(--surface)); color: var(--body); font-weight: 600; }
-    .anim-mini td.trunc { cursor: help; } .anim-mini td.trunc span { border-bottom: 1px dotted var(--muted); }
-
-    /* final Stage-3 ranked list */
-    .anim-final { display: grid; gap: 0.4rem; }
-    .fin-row {
-      display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; border-radius: 0.5rem;
-      background: var(--surface); border: 1px solid var(--border); font-size: 0.86rem;
-      animation: fin-in .4s ease backwards;
-    }
-    .fin-row.gold { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright); }
-    .fin-row .fin-rank { font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; width: 1.4rem; }
-    .fin-row .fin-title { color: var(--ink); font-weight: 600; }
-    .fin-row .fin-star { color: var(--gold-bright); }
-    @keyframes fin-in { from { opacity: 0; transform: translateX(-8px); } }
-
-    /* progress + controls (revealed on hover / focus) */
-    .anim-ctl {
-      display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.2rem;
-      border-top: 1px solid var(--border); background: var(--surface-soft);
-    }
-    .anim-progress { flex: 1; height: 6px; border-radius: 999px; background: var(--border); position: relative; cursor: pointer; }
-    .anim-bar { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, var(--blue), var(--gold-bright)); width: 0%; }
-    .cbtn {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 0.45rem; cursor: pointer;
-      color: var(--ink); font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
-      padding: 0.3rem 0.6rem; min-width: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
-    }
-    .cbtn:hover { border-color: var(--blue); color: var(--blue); }
-    .anim-time { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 66px; text-align: right; }
-    .speed-btn { min-width: 2.6rem; }
 
     /* ─── Demo playground ────────────────────── */
     .play {
@@ -372,7 +298,70 @@
     }
     .dl-btn:hover { border-color: var(--blue); }
 
-    .cards { margin-top: 1rem; display: grid; gap: 0.7rem; }
+    /* results + gold panel side by side */
+    .results-layout { margin-top: 1rem; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
+    @media (max-width: 800px) { .results-layout { grid-template-columns: 1fr; } }
+    .cards { display: grid; gap: 0.7rem; min-width: 0; }
+
+    /* ── Gold-table status panel ── */
+    .gold-panel {
+      position: sticky; top: 1rem; align-self: start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 0.9rem;
+      box-shadow: 0 8px 30px var(--shadow); overflow: hidden;
+    }
+    @media (max-width: 800px) { .gold-panel { position: static; } }
+    .gp-head {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.9rem;
+      background: color-mix(in srgb, var(--gold-bright) 12%, var(--surface));
+      border-bottom: 1px solid color-mix(in srgb, var(--gold-bright) 30%, var(--border));
+    }
+    .gp-head .gp-ico { color: var(--gold-bright); font-size: 1rem; line-height: 1; }
+    .gp-head .gp-t { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--gold); }
+    .gp-body { padding: 0.9rem; display: grid; gap: 0.85rem; }
+
+    /* recall gauge (circular) + verdict */
+    .gp-recall { display: flex; align-items: center; gap: 0.8rem; }
+    .gauge { --v: 0; --c: var(--muted); width: 62px; height: 62px; flex-shrink: 0; position: relative;
+      border-radius: 50%; background: conic-gradient(var(--c) calc(var(--v) * 1%), var(--border) 0); }
+    .gauge::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--surface); }
+    .gauge .gv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 800; color: var(--c); font-variant-numeric: tabular-nums; z-index: 1; }
+    .gp-recall .gp-verdict { display: grid; gap: 0.15rem; }
+    .gp-recall .gp-vlabel { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .gp-recall .gp-vval { font-size: 0.98rem; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: 0.35rem; }
+    .gp-recall .gp-vval.hit { color: var(--green, #2fa96b); }
+    .gp-recall .gp-vval.miss { color: var(--muted); }
+    .chk { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+      border-radius: 50%; background: #2fa96b; color: #fff; font-size: 0.7rem; font-weight: 900; }
+
+    /* gold table identity + rank */
+    .gp-gold { display: grid; gap: 0.4rem; padding: 0.7rem; border-radius: 0.6rem;
+      border: 1px solid var(--border); background: var(--surface-soft); }
+    .gp-gold.present { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright); }
+    .gp-gold .gg-title { font-size: 0.9rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 0.35rem; }
+    .gp-gold .gg-title .star { color: var(--gold-bright); }
+    .gp-gold .gg-id { font-size: 0.7rem; color: var(--muted); word-break: break-all; }
+    .gp-rankrow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.15rem; }
+    .gp-rankrow .rk-label { font-size: 0.74rem; color: var(--muted); font-weight: 600; }
+    .rk-badge { font-size: 0.8rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-variant-numeric: tabular-nums; }
+    .rk-badge.hit { background: color-mix(in srgb, var(--gold-bright) 22%, var(--surface)); color: var(--gold); }
+    .rk-badge.deep { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+
+    /* per-stage rank strip: gold's position as it flows through the cascade */
+    .gp-flow { display: grid; gap: 0.4rem; }
+    .gp-flow .gpf-t { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .gpf-row { display: flex; align-items: center; gap: 0.55rem; }
+    .gpf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .gpf-row.s1 .gpf-dot { background: var(--blue); } .gpf-row.s2 .gpf-dot { background: var(--gold-bright); }
+    .gpf-row.s3 .gpf-dot { background: var(--purple); }
+    .gpf-name { font-size: 0.78rem; color: var(--body); font-weight: 600; flex: 1; }
+    .gpf-name.cur { color: var(--ink); }
+    .gpf-rank { font-size: 0.76rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .gpf-rank.hit { color: var(--green, #2fa96b); } .gpf-rank.deep { color: var(--muted); }
+
+    .rcard { min-width: 0; }
     .rcard {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 0.7rem; padding: 0.85rem 1rem; position: relative;
@@ -381,7 +370,11 @@
     .rcard.top { border-color: var(--gold-bright); box-shadow: inset 3px 0 0 var(--gold-bright), 0 2px 10px var(--shadow); }
     .rcard-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
     .rcard-head h4 { font-family: 'Inter', sans-serif; font-size: 0.98rem; margin: 0; color: var(--ink); }
-    .rcard-meta { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+    .rcard-meta { font-size: 0.76rem; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .rcard-meta .gold-tag { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--gold); background: color-mix(in srgb, var(--gold-bright) 20%, var(--surface));
+      padding: 0.05rem 0.4rem; border-radius: 999px; }
+    .rcard-head h4 .chk { vertical-align: middle; }
     .star { color: var(--gold-bright); }
     .score {
       background: color-mix(in srgb, var(--blue) 14%, var(--surface)); color: var(--blue);
@@ -515,8 +508,9 @@
   <div class="topbar-inner">
     <span class="brand"><span class="c">CRAFT</span></span>
     <div class="segmented" role="tablist" aria-label="View">
-      <button class="seg-btn active" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo</button>
-      <button class="seg-btn" id="tab-paper" role="tab" aria-selected="false" aria-controls="panel-paper">Paper</button>
+      <button class="seg-btn" id="tab-demo" role="tab" aria-selected="false" aria-controls="panel-demo">Demo</button>
+      <button class="seg-btn active" id="tab-paper" role="tab" aria-selected="true" aria-controls="panel-paper">Paper</button>
+      <span class="cue-hint" id="demo-cue" role="button" tabindex="0">Try the live explorer →</span>
     </div>
     <span class="topbar-spacer"></span>
     <a class="ghost" href="https://github.com/coral-lab-asu/CRAFT" target="_blank">GitHub</a>
@@ -541,6 +535,18 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Paper (ACL)
     </a>
+    <a class="btn btn-outline" href="CRAFT.pdf" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+      Paper PDF
+    </a>
+    <a class="btn btn-outline" href="CRAFT_slides.pdf" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Slides
+    </a>
+    <a class="btn btn-outline" href="CRAFT_poster.jpg" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Poster
+    </a>
     <a class="btn btn-outline" href="https://arxiv.org/abs/2505.14984" target="_blank">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       arXiv
@@ -554,29 +560,7 @@
 
 <main>
   <!-- ══════════ DEMO PANEL ══════════ -->
-  <div class="panel active" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
-
-    <div class="eyebrow">How it works</div>
-    <h2 class="h-sec">The pipeline, step by step</h2>
-    <p class="lead">A question and a large collection of tables go in. CRAFT runs a sparse and a dense
-      retriever in parallel, builds a mini-table from the best rows, then reranks to a final shortlist.</p>
-
-    <div class="anim mt-lg" id="anim">
-      <div class="anim-stage">
-        <div class="anim-caption"><span class="step-dot"></span><span id="anim-cap">Loading…</span></div>
-        <div id="anim-body"></div>
-      </div>
-      <div class="anim-ctl">
-        <button class="cbtn" id="anim-play" aria-label="Play or pause">❚❚</button>
-        <button class="cbtn" id="anim-back" aria-label="Back 5 seconds">« 5s</button>
-        <button class="cbtn" id="anim-fwd" aria-label="Forward 5 seconds">5s »</button>
-        <div class="anim-progress" id="anim-track"><div class="anim-bar" id="anim-bar"></div></div>
-        <span class="anim-time" id="anim-time">0:00 / 0:00</span>
-        <button class="cbtn speed-btn" id="anim-speed" aria-label="Playback speed">1×</button>
-      </div>
-    </div>
-
-    <hr class="divider" />
+  <div class="panel" id="panel-demo" role="tabpanel" aria-labelledby="tab-demo">
 
     <div class="eyebrow">Explore results</div>
     <h2 class="h-sec">Browse what CRAFT retrieves</h2>
@@ -615,10 +599,8 @@
             <div class="ksel" id="krow">
               <span class="ctl-label">Show top</span>
               <button class="kbtn" data-k="1">1</button>
-              <button class="kbtn active" data-k="5">5</button>
-              <button class="kbtn" data-k="3">3</button>
-              <button class="kbtn" data-k="10">10</button>
-              <button class="kbtn" data-k="0">All</button>
+              <button class="kbtn active" data-k="3">3</button>
+              <button class="kbtn" data-k="5">5</button>
             </div>
             <div class="ctl-toggles">
               <label class="tgl"><input type="checkbox" id="show-rows" /> Headers &amp; rows</label>
@@ -626,7 +608,10 @@
             </div>
           </div>
 
-          <div class="cards" id="results"></div>
+          <div class="results-layout">
+            <div class="cards" id="results"></div>
+            <aside class="gold-panel" id="gold-panel" hidden aria-label="Gold table status"></aside>
+          </div>
         </div>
 
         <div id="empty-state" class="empty-state">
@@ -671,7 +656,7 @@ craft tui                                            <span class="cmt"># menu-dr
   </div>
 
   <!-- ══════════ PAPER PANEL ══════════ -->
-  <div class="panel" id="panel-paper" role="tabpanel" aria-labelledby="tab-paper">
+  <div class="panel active" id="panel-paper" role="tabpanel" aria-labelledby="tab-paper">
 
     <!-- What is CRAFT -->
     <div class="eyebrow">Overview</div>
@@ -694,25 +679,27 @@ craft tui                                            <span class="cmt"># menu-dr
       <div class="fcard">
         <div class="k">Stage 1 · Sparse</div>
         <h4>SPLADE</h4>
-        <p>Lexical retrieval over enriched table text narrows the full corpus to the top <b>5,000</b> candidates.</p>
+        <p>Lexical retrieval scans the whole corpus cheaply. Working over LLM-enriched table text and
+          expanded queries, it casts a wide net so the answer table stays in the running.</p>
       </div>
       <div class="fcard s2">
         <div class="k">Stage 2 · Dense</div>
         <h4>Sentence Transformer</h4>
-        <p>Row-level dense reranking scores candidates against the query, keeping the top <b>100</b>.</p>
+        <p>Each candidate is compressed to a mini-table of its most relevant rows, then scored by meaning
+          rather than shared words — trimming noise and sharpening the shortlist.</p>
       </div>
       <div class="fcard s3">
         <div class="k">Stage 3 · Rerank</div>
         <h4>Final reranking</h4>
-        <p>A reranker or embedding model — open-source or API — orders the shortlist into the final
-          top-<em>k</em>. This stage is swappable, so you can pick the model that fits your setup.</p>
+        <p>A stronger model — reranker or embedding, open-source or API — runs only on the finalists to set
+          the final order. This stage is plug-and-play, so you pick the model that fits your setup.</p>
       </div>
     </div>
 
     <div class="grid-3 mt-lg">
-      <div class="fcard"><div class="ico">🔍</div><h4>Query expansion</h4><p>An LLM generates sub-questions that broaden lexical coverage of each query.</p></div>
-      <div class="fcard"><div class="ico">📋</div><h4>Table enrichment</h4><p>Each table gets an LLM title + summary, bridging the lexical gap with natural-language queries.</p></div>
-      <div class="fcard"><div class="ico">✂️</div><h4>Mini-tables</h4><p>Top query-relevant rows form a compact mini-table, cutting context up to 5&times;.</p></div>
+      <div class="fcard"><div class="ico">🔍</div><h4>Query expansion</h4><p>An LLM decomposes each question into sub-questions online, broadening the lexical signal the sparse retriever can match.</p></div>
+      <div class="fcard"><div class="ico">📋</div><h4>Table enrichment</h4><p>An LLM writes a title and description for every table offline, bridging the vocabulary gap between tables and natural-language questions.</p></div>
+      <div class="fcard"><div class="ico">✂️</div><h4>Mini-tables</h4><p>The most query-relevant rows form a compact mini-table, so more candidate tables fit inside a model's context.</p></div>
     </div>
 
     <img src="static/images/craft_overview.png" alt="CRAFT pipeline overview" class="fig wide mt-lg" />
@@ -751,15 +738,26 @@ craft tui                                            <span class="cmt"># menu-dr
     <div class="eyebrow">Cite</div>
     <h2 class="h-sec">BibTeX</h2>
     <div class="bib mt-lg">
-      <pre class="code" id="bib">@misc{singh2025crafttrainingfreecascadedretrieval,
-      title={CRAFT: Training-Free Cascaded Retrieval for Tabular QA},
-      author={Adarsh Singh and Kushal Raj Bhandari and Jianxi Gao
-              and Soham Dan and Vivek Gupta},
-      year={2025},
-      eprint={2505.14984},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2505.14984},
+      <pre class="code" id="bib">@inproceedings{singh-etal-2026-craft,
+    title = "{CRAFT}: Training-Free Cascaded Retrieval for Tabular {QA}",
+    author = "Singh, Adarsh  and
+      Bhandari, Kushal Raj  and
+      Gao, Jianxi  and
+      Dan, Soham  and
+      Gupta, Vivek",
+    editor = "Liakata, Maria  and
+      Moreira, Viviane P.  and
+      Zhang, Jiajun  and
+      Jurgens, David",
+    booktitle = "Proceedings of the 64th Annual Meeting of the {A}ssociation for {C}omputational {L}inguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2026",
+    address = "San Diego, California, United States",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.acl-long.149/",
+    doi = "10.18653/v1/2026.acl-long.149",
+    pages = "3284--3298",
+    ISBN = "979-8-89176-390-6"
 }</pre>
       <button class="copy" onclick="copyBib()">Copy</button>
     </div>
@@ -808,6 +806,35 @@ craft tui                                            <span class="cmt"># menu-dr
     document.querySelector(".play").scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
+  /* ── Delayed cue: after a moment on the Paper landing, glow the Demo tab and
+        show a "point here" hint. It's dismissed the instant the visitor engages
+        with the Demo in any way. ── */
+  (function demoCue() {
+    const cue = document.getElementById("demo-cue");
+    let shown = false, timer = null;
+    const clear = () => {
+      clearTimeout(timer);
+      tabs.demo.classList.remove("cue");
+      cue.classList.remove("show");
+    };
+    const openDemo = () => { clear(); showTab("demo"); };
+    // Wrap Demo interactions so the cue vanishes as soon as the user heads there.
+    tabs.demo.addEventListener("click", clear);
+    document.getElementById("hero-try").addEventListener("click", clear);
+    cue.addEventListener("click", openDemo);
+    cue.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDemo(); } });
+    // Any tab switch also cancels a pending cue.
+    tabs.paper.addEventListener("click", clear);
+    timer = setTimeout(() => {
+      if (shown) return;
+      // Only nudge if the visitor is still on the Paper landing.
+      if (!panels.paper.classList.contains("active")) return;
+      shown = true;
+      tabs.demo.classList.add("cue");
+      cue.classList.add("show");
+    }, 4500);
+  })();
+
   /* ── Result browser: lazy-load a dataset's precomputed results and search them ── */
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -826,7 +853,7 @@ craft tui                                            <span class="cmt"># menu-dr
     cache: {},           // dataset -> data
     query: null,         // currently selected query object
     stage: "stage3",     // active stage
-    k: 5,                // top-k to show
+    k: 3,                // top-k to show (options: 1 / 3 / 5)
     showRows: false,
   };
   const els = {
@@ -839,6 +866,7 @@ craft tui                                            <span class="cmt"># menu-dr
     curQuestion: document.getElementById("cur-question"),
     curQid: document.getElementById("cur-qid"),
     results: document.getElementById("results"),
+    goldPanel: document.getElementById("gold-panel"),
   };
 
   async function loadDataset(ds) {
@@ -906,12 +934,96 @@ craft tui                                            <span class="cmt"># menu-dr
     }
     return `<div class="rcard${isGold?' top':''}">
       <div class="rcard-head">
-        <h4>${isGold?'<span class="star">★</span> ':''}${esc(t.title)}</h4>
-        <span class="rcard-meta">#${rank}</span>
+        <h4>${isGold?'<span class="star">★</span> ':''}${esc(t.title)}${isGold?' <span class="chk">✓</span>':''}</h4>
+        <span class="rcard-meta">${isGold?'<span class="gold-tag">gold</span> ':''}#${rank}</span>
       </div>
       <div class="tid">${esc(tableId)}</div>
       ${preview}
     </div>`;
+  }
+
+  // Rank (1-based) of the first gold table within a ranked id list, or 0 if absent.
+  function goldRankIn(ids, goldSet) {
+    for (let i = 0; i < ids.length; i++) if (goldSet.has(ids[i])) return i + 1;
+    return 0;
+  }
+
+  const STAGE_META = {
+    stage1: { name: "Stage 1 · SPLADE", cls: "s1" },
+    stage2: { name: "Stage 2 · Dense", cls: "s2" },
+    stage3: { name: "Stage 3 · Rerank", cls: "s3" },
+  };
+
+  function renderGoldPanel() {
+    const q = state.query;
+    const goldIds = q.gold_table_ids || [];
+    if (!goldIds.length) { els.goldPanel.hidden = true; return; }
+    els.goldPanel.hidden = false;
+
+    const goldSet = new Set(goldIds);
+    const goldId = goldIds[0];
+    const goldTitle = ((state.data.tables || {})[goldId] || {}).title || goldId;
+
+    // The list shipped to the site is capped at 5 per stage; a gold not found in
+    // it is "beyond" that shown depth rather than truly unranked.
+    const capN = 5;
+    const stageIds = q.stages[state.stage] || [];
+    const rankFull = goldRankIn(stageIds, goldSet);      // exact rank within shipped list
+    const inTopK = rankFull > 0 && rankFull <= state.k;  // visible at current "show top"
+
+    // Recall@k for the current stage: is a gold table within the top-k shown?
+    const hit = rankFull > 0 && rankFull <= state.k;
+    const recallPct = hit ? 100 : 0;
+    const gaugeColor = hit ? "var(--green)" : "var(--muted)";
+
+    const rankBadge = rankFull > 0
+      ? `<span class="rk-badge hit">#${rankFull}</span>`
+      : `<span class="rk-badge deep">beyond top ${capN}</span>`;
+
+    const presentClass = rankFull > 0 ? " present" : "";
+    const titleMark = rankFull > 0 ? '<span class="star">★</span>' : "";
+    const checkMark = inTopK ? '<span class="chk">✓</span>' : "";
+
+    // Per-stage flow: where the gold table sits as it moves through the cascade.
+    const flow = ["stage1", "stage2", "stage3"].map(st => {
+      const r = goldRankIn(q.stages[st] || [], goldSet);
+      const meta = STAGE_META[st];
+      const cur = st === state.stage ? " cur" : "";
+      const rk = r > 0
+        ? `<span class="gpf-rank hit">#${r}</span>`
+        : `<span class="gpf-rank deep">— </span>`;
+      return `<div class="gpf-row ${meta.cls}">
+        <span class="gpf-dot"></span>
+        <span class="gpf-name${cur}">${esc(meta.name)}</span>${rk}
+      </div>`;
+    }).join("");
+
+    const verdictLabel = STAGE_META[state.stage].name.split(" · ")[0];
+    els.goldPanel.innerHTML = `
+      <div class="gp-head"><span class="gp-ico">◆</span><span class="gp-t">Gold table</span></div>
+      <div class="gp-body">
+        <div class="gp-recall">
+          <div class="gauge" style="--v:${recallPct};--c:${gaugeColor}"><span class="gv">${hit ? "1.0" : "0.0"}</span></div>
+          <div class="gp-verdict">
+            <span class="gp-vlabel">Recall @ ${state.k} · ${esc(verdictLabel)}</span>
+            <span class="gp-vval ${hit ? "hit" : "miss"}">${hit ? '<span class="chk">✓</span> found' : "not in top " + state.k}</span>
+          </div>
+        </div>
+
+        <div class="gp-gold${presentClass}">
+          <div class="gg-title">${titleMark}${esc(goldTitle)}${checkMark}</div>
+          <div class="gg-id">${esc(goldId)}</div>
+          <div class="gp-rankrow">
+            <span class="rk-label">Rank in ${esc(verdictLabel)}</span>
+            ${rankBadge}
+          </div>
+        </div>
+
+        <div class="gp-flow">
+          <span class="gpf-t">Gold rank through the cascade</span>
+          ${flow}
+        </div>
+      </div>`;
   }
 
   function renderResults() {
@@ -921,9 +1033,10 @@ craft tui                                            <span class="cmt"># menu-dr
     const shown = state.k === 0 ? ids : ids.slice(0, state.k);
     if (!shown.length) {
       els.results.innerHTML = `<p class="empty-state">No tables recorded for this stage.</p>`;
-      return;
+    } else {
+      els.results.innerHTML = shown.map((id, i) => tableCard(id, i+1, gold.has(id))).join("");
     }
-    els.results.innerHTML = shown.map((id, i) => tableCard(id, i+1, gold.has(id))).join("");
+    renderGoldPanel();
   }
 
   /* search interactions */
@@ -1008,196 +1121,7 @@ craft tui                                            <span class="cmt"># menu-dr
     els.search.value = "brazos river"; renderSuggestions(matchQuestions("brazos river")); els.search.focus();
   });
 
-  loadDataset("nq").then(startAnimation);  // preload default dataset, then animate
-
-  /* ── Pipeline animation (shares the demo's table styling) ──
-     A scene timeline drives an incremental story:
-       0 question + corpus of N tables
-       1 Stage 1 (sparse) and Stage 2 (dense) filter IN PARALLEL
-       2 mini-table built from the best rows
-       3 Stage 3 rerank -> final shortlist
-     The clock advances in ms; each scene renders from elapsed time so the
-     ±5s / speed controls work by simply moving or scaling the clock. */
-  const anim = {
-    t: 0, dur: 22000, playing: true, speed: 1, last: 0, raf: null,
-    scenes: [
-      { at: 0,     name: "input" },
-      { at: 4500,  name: "parallel" },
-      { at: 12000, name: "mini" },
-      { at: 16000, name: "final" },
-    ],
-    example: null,
-  };
-  const A = {
-    cap: document.getElementById("anim-cap"),
-    body: document.getElementById("anim-body"),
-    play: document.getElementById("anim-play"),
-    back: document.getElementById("anim-back"),
-    fwd: document.getElementById("anim-fwd"),
-    track: document.getElementById("anim-track"),
-    bar: document.getElementById("anim-bar"),
-    time: document.getElementById("anim-time"),
-    speed: document.getElementById("anim-speed"),
-  };
-
-  function pickExample() {
-    // Prefer the Brazos River query (a clean single-table answer); else the first.
-    if (!state.cache.nq) return null;
-    const qs = state.cache.nq.queries;
-    const ex = qs.find(q => /brazos river/i.test(q.question)) || qs[0];
-    return ex ? { data: state.cache.nq, q: ex } : null;
-  }
-
-  function fmt(ms) { const s = Math.max(0, Math.floor(ms/1000)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
-
-  function glyphs(n, cls) {
-    let s = "";
-    for (let i = 0; i < n; i++) s += `<div class="tglyph ${cls(i)}"><div class="tg-head"></div><div class="tg-body"></div></div>`;
-    return s;
-  }
-
-  function miniTableHTML(ex) {
-    const t = ex.data.tables[ex.q.stages.stage3[0]] || { title: "", headers: [], rows: [] };
-    const ncol = Math.min(4, Math.max((t.headers||[]).length, ((t.rows||[])[0]||[]).length, 1));
-    const head = Array.from({length: ncol}, (_, i) => {
-      const h = (t.headers||[])[i];
-      return `<th>${esc(h && h.trim() ? h : "Col " + (i+1))}</th>`;
-    }).join("");
-    const rows = (t.rows||[]).slice(0,3).map(r=>`<tr>${r.slice(0,ncol).map(cell).join("")}</tr>`).join("");
-    return `<div class="anim-mini">
-      <div class="am-title">${esc(t.title||"mini-table")}</div>
-      <table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>
-    </div>`;
-  }
-
-  function finalHTML(ex, upto) {
-    const ids = ex.q.stages.stage3.slice(0, 5);
-    const gold = new Set(ex.q.gold_table_ids || []);
-    return `<div class="anim-final">` + ids.map((id, i) => {
-      if (i > upto) return "";
-      const t = ex.data.tables[id] || { title: id };
-      const isGold = gold.has(id);
-      return `<div class="fin-row ${isGold?'gold':''}" style="animation-delay:${i*0.08}s">
-        <span class="fin-rank">#${i+1}</span>
-        ${isGold?'<span class="fin-star">★</span>':''}
-        <span class="fin-title">${esc(t.title||id)}</span>
-      </div>`;
-    }).join("") + `</div>`;
-  }
-
-  let lastKey = "";
-  function renderAnim(force) {
-    // Progress + time update every frame; the heavier scene DOM only rebuilds
-    // when the scene (or its visible sub-step) actually changes.
-    A.bar.style.width = `${Math.min(100, (anim.t / anim.dur) * 100)}%`;
-    A.time.textContent = `${fmt(anim.t)} / ${fmt(anim.dur)}`;
-
-    const ex = anim.example;
-    if (!ex) { A.cap.textContent = "Example unavailable."; return; }
-    const t = anim.t;
-    const q = `<span class="q-chip"><span class="q-ico">?</span>${esc(ex.q.question)}</span>`;
-
-    // A key that changes only at meaningful visual steps (throttles re-render).
-    let key;
-    if (t < anim.scenes[1].at) key = "s0:" + Math.min(28, Math.floor((t/anim.scenes[1].at)*28)+4);
-    else if (t < anim.scenes[2].at) key = "s1:" + ((t-anim.scenes[1].at)/(anim.scenes[2].at-anim.scenes[1].at) > 0.35 ? "b" : "a");
-    else if (t < anim.scenes[3].at) key = "s2";
-    else key = "s3:" + Math.min(4, Math.floor(((t-anim.scenes[3].at)/(anim.dur-anim.scenes[3].at))*6));
-    if (!force && key === lastKey) return;
-    lastKey = key;
-
-    if (t < anim.scenes[1].at) {
-      // Scene 0: question + growing corpus of tables, a search shimmer.
-      const grown = Math.min(28, Math.floor((t / anim.scenes[1].at) * 28) + 4);
-      A.cap.innerHTML = `A question meets a corpus of <b>many tables</b>`;
-      A.body.innerHTML = `${q}
-        <div class="anim-cols"><div class="anim-col" style="grid-column:1 / -1">
-          <div class="col-head"><span>Table corpus</span><span class="badge">N tables</span></div>
-          <div class="tgrid">${glyphs(grown, () => "")}</div>
-        </div></div>`;
-    } else if (t < anim.scenes[2].at) {
-      // Scene 1: Stage 1 and Stage 2 filter in parallel.
-      const p = (t - anim.scenes[1].at) / (anim.scenes[2].at - anim.scenes[1].at);
-      A.cap.innerHTML = `<b>Stage 1</b> (sparse) and <b>Stage 2</b> (dense) narrow the corpus — in parallel`;
-      const keepN = 6, total = 24;
-      // Deterministic: as the scene progresses, all but the first keepN dim out.
-      const mk = (kcls) => glyphs(total, i => p > 0.35 ? (i < keepN ? kcls : "dim") : "");
-      A.body.innerHTML = `${q}
-        <div class="anim-cols">
-          <div class="anim-col col-s1">
-            <div class="col-head"><span>Stage 1 · SPLADE</span><span class="badge">5,000</span></div>
-            <div class="tgrid">${mk("keep")}</div>
-          </div>
-          <div class="anim-col col-s2">
-            <div class="col-head"><span>Stage 2 · Dense</span><span class="badge">100</span></div>
-            <div class="tgrid">${mk("keep2")}</div>
-          </div>
-        </div>`;
-    } else if (t < anim.scenes[3].at) {
-      // Scene 2: mini-table construction from the top candidate's best rows.
-      A.cap.innerHTML = `Build a <b>mini-table</b> from the most relevant rows`;
-      A.body.innerHTML = `${q}
-        <div class="anim-cols">
-          <div class="anim-col">
-            <div class="col-head"><span>Top candidate</span></div>
-            <div class="tgrid" style="grid-template-columns:repeat(3,1fr);max-width:180px">${glyphs(6, i => i===0?"keep2 pop":"dim")}</div>
-          </div>
-          <div class="anim-col">
-            <div class="col-head" style="color:var(--gold)"><span>Mini-table</span></div>
-            ${miniTableHTML(ex)}
-          </div>
-        </div>`;
-    } else {
-      // Scene 3: Stage 3 rerank -> final shortlist (revealed row by row).
-      const p = (t - anim.scenes[3].at) / (anim.dur - anim.scenes[3].at);
-      const upto = Math.min(4, Math.floor(p * 6));
-      A.cap.innerHTML = `<b>Stage 3</b> reranks to the final shortlist`;
-      A.body.innerHTML = `${q}
-        <div class="anim-cols"><div class="anim-col" style="grid-column:1 / -1">
-          <div class="col-head" style="color:var(--purple)"><span>Stage 3 · Final ranking</span><span class="badge">top-k</span></div>
-          ${finalHTML(ex, upto)}
-        </div></div>`;
-    }
-  }
-
-  function tick(now) {
-    if (!anim.last) anim.last = now;
-    const dt = (now - anim.last) * anim.speed;
-    anim.last = now;
-    if (anim.playing) {
-      anim.t += dt;
-      if (anim.t >= anim.dur) anim.t = 0;  // loop
-      renderAnim();
-    }
-    anim.raf = requestAnimationFrame(tick);
-  }
-
-  function setPlaying(on) { anim.playing = on; A.play.textContent = on ? "❚❚" : "▶"; anim.last = 0; }
-  function seek(ms) { anim.t = Math.max(0, Math.min(anim.dur, ms)); renderAnim(true); }
-
-  function startAnimation() {
-    anim.example = pickExample();
-    if (!anim.example) { A.cap.textContent = "Example unavailable."; return; }
-    A.play.addEventListener("click", () => setPlaying(!anim.playing));
-    A.back.addEventListener("click", () => seek(anim.t - 5000));
-    A.fwd.addEventListener("click", () => seek(anim.t + 5000));
-    A.speed.addEventListener("click", () => {
-      const speeds = [1, 1.5, 2, 0.5];
-      anim.speed = speeds[(speeds.indexOf(anim.speed) + 1) % speeds.length];
-      A.speed.textContent = `${anim.speed}×`;
-    });
-    A.track.addEventListener("click", (e) => {
-      const rect = A.track.getBoundingClientRect();
-      seek(((e.clientX - rect.left) / rect.width) * anim.dur);
-    });
-    // Respect reduced-motion: show the final state, don't auto-run.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      anim.t = anim.scenes[3].at + 1; setPlaying(false); renderAnim(true); return;
-    }
-    setPlaying(true);
-    renderAnim(true);
-    anim.raf = requestAnimationFrame(tick);
-  }
+  loadDataset("nq");  // preload the default dataset for the explorer
 
   /* ── craft tui terminal replay ── */
   const LINES = [
@@ -1238,7 +1162,8 @@ craft tui                                            <span class="cmt"># menu-dr
     });
   }
   document.getElementById("replay").addEventListener("click", playTerm);
-  playTerm();  // demo tab is default-visible
+  // The terminal replay starts the first time the Demo tab is opened (Paper is the
+  // default view), driven by showTab("demo").
 
   /* ── BibTeX copy ── */
   function copyBib() {

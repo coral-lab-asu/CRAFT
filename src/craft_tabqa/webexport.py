@@ -27,9 +27,10 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# How many tables to keep per stage in the exported file. Stage 3 is CRAFT's
-# final output; stages 1-2 are shown on demand, so a shorter list is enough.
-STAGE_TOP_N = {"stage1": 10, "stage2": 10, "stage3": 10}
+# How many tables to keep per stage in the exported file. The website shows at
+# most the top 5 per stage (default 3), so exporting 5 is enough and keeps the
+# file small.
+STAGE_TOP_N = {"stage1": 5, "stage2": 5, "stage3": 5}
 
 # Keep the website payload small: cap preview rows, and de-duplicate table
 # content into a shared map. Descriptions are intentionally NOT shipped to the
